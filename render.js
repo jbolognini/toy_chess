@@ -14,6 +14,8 @@ export class Renderer {
     const w = this.canvas.width;
     const h = this.canvas.height;
     ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "magenta";
+    ctx.fillRect(0, 0, w, h);
     
     ctx.fillStyle = "white";
     ctx.font = "14px monospace";
