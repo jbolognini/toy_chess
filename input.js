@@ -106,15 +106,26 @@ export class Input {
     const dpr = window.devicePixelRatio || 1;
     const w = this.canvas.width;
     const h = this.canvas.height;
-
+  
     const hudH = 46 * dpr;
-    const availH = Math.max(1, h - hudH);
-    const size = Math.min(w, availH) * 0.94;
+  
+    // Must match render.js
+    const evalW = 16 * dpr;
+    const evalPad = 10 * dpr;
+    const leftInset = evalW + evalPad;
+  
+    const bottomInset = 0;
+  
+    const availW = Math.max(1, w - leftInset);
+    const availH = Math.max(1, h - hudH - bottomInset);
+  
+    const size = Math.min(availW, availH) * 0.94;
     const sq = size / 8;
-    const ox = (w - size) / 2;
+  
+    const ox = leftInset + (availW - size) / 2;
     const oy = hudH + (availH - size) / 2;
-
-    return { dpr, w, h, hudH, size, sq, ox, oy };
+  
+    return { dpr, w, h, hudH, size, sq, ox, oy, leftInset, bottomInset };
   }
 
   hitTest(e) {

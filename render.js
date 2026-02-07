@@ -21,21 +21,48 @@ export class Renderer {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Small HUD inside canvas (status + debug). Title is above in HTML.
+    // Canvas HUD (status + debug)
     const hudH = 46 * dpr;
 
-    const availH = Math.max(1, h - hudH);
-    const size = Math.min(w, availH) * 0.94;
-    const sq = size / 8;
-    const ox = (w - size) / 2;
-    const oy = hudH + (availH - size) / 2;
+    // Left eval bar gutter (placeholder for now)
+    const evalW = 16 * dpr;          // width of eval bar
+    const evalPad = 10 * dpr;        // gap between eval bar and board
+    const leftInset = evalW + evalPad;
 
-    return { dpr, w, h, hudH, size, sq, ox, oy };
+    // Bottom inset (drawer later). Keep 0 for now, but it's here for future.
+    const bottomInset = 0;
+
+    // Available rect for board
+    const availW = Math.max(1, w - leftInset);
+    const availH = Math.max(1, h - hudH - bottomInset);
+
+    const size = Math.min(availW, availH) * 0.94;
+    const sq = size / 8;
+
+    const boardX0 = leftInset + (availW - size) / 2;
+    const boardY0 = hudH + (availH - size) / 2;
+
+    // Eval bar position (vertically aligned to board)
+    const evalX = (leftInset - evalPad - evalW) / 2; // centered in left gutter
+    const evalY = boardY0;
+    const evalH = size;
+
+    return {
+      dpr, w, h,
+      hudH,
+      leftInset,
+      bottomInset,
+      size, sq,
+      ox: boardX0,
+      oy: boardY0,
+      eval: { x: evalX, y: evalY, w: evalW, h: evalH }
+    };
   }
 
   draw() {
     const ctx = this.ctx;
-    const { dpr, w, h, hudH, size, sq, ox, oy } = this.computeGeom();
+    const geom = this.computeGeom();
+    const { dpr, w, h, sq, ox, oy, eval } = geom;
 
     ctx.clearRect(0, 0, w, h);
 
@@ -50,6 +77,9 @@ export class Renderer {
       ctx.fillStyle = "#888";
       ctx.fillText(dbg, 10 * dpr, 38 * dpr);
     }
+
+    // Eval bar placeholder (left)
+    this.drawEvalPlaceholder(ctx, eval, dpr);
 
     // Board squares
     for (let r = 0; r < 8; r++) {
@@ -88,15 +118,31 @@ export class Renderer {
 
     // Promotion chooser (outside board, clamped)
     if (this.game.pendingPromotion) {
-      this.drawPromotionChooser(ctx, { dpr, w, h, sq, ox, oy, size, hudH });
+      this.drawPromotionChooser(ctx, geom);
     }
+  }
+
+  drawEvalPlaceholder(ctx, eval, dpr) {
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(eval.x, eval.y, eval.w, eval.h);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
+    ctx.strokeRect(eval.x, eval.y, eval.w, eval.h);
+
+    // mid-line placeholder
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = Math.max(1, Math.floor(1 * dpr));
+    ctx.beginPath();
+    ctx.moveTo(eval.x, eval.y + eval.h / 2);
+    ctx.lineTo(eval.x + eval.w, eval.y + eval.h / 2);
+    ctx.stroke();
   }
 
   drawPromotionChooser(ctx, geom) {
     const { dpr, sq, ox, oy, size } = geom;
     const { color, to } = this.game.pendingPromotion;
 
-    // promotion is always to last rank => y is 0 (rank 8) or 7 (rank 1)
     const { x: toX, y: toY } = this.game.xyFromSquare(to);
 
     const box = Math.floor(sq * 0.78);
@@ -106,7 +152,6 @@ export class Renderer {
     const popupW = box * 4 + gap * 3;
     const popupH = box;
 
-    // Center the chooser on the promoting file, then clamp to board bounds
     const centerX = ox + (toX + 0.5) * sq;
     let startX = Math.floor(centerX - popupW / 2);
 
@@ -115,19 +160,16 @@ export class Renderer {
     if (startX < minX) startX = minX;
     if (startX > maxX) startX = maxX;
 
-    // Place outside the board: above if promoting on top rank, below if bottom rank
     let y;
     if (toY === 0) {
-      // above board (into HUD area), but never below 0
       y = Math.floor(oy - popupH - margin);
       if (y < 0) y = 0;
     } else {
-      // below board
       y = Math.floor(oy + 8 * sq + margin);
     }
 
-    // Slight backdrop behind the chooser (only around chooser, not full-screen)
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    // Light backdrop just behind chooser
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(startX - margin, y - margin, popupW + margin * 2, popupH + margin * 2);
 
     const pieces = ["q", "r", "b", "n"];
@@ -141,7 +183,7 @@ export class Renderer {
       ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
       ctx.strokeRect(x, y, box, box);
 
-      const code = `${color}${pieces[i]}`; // wq/wr/wb/wn or bq/...
+      const code = `${color}${pieces[i]}`;
       const img = this.getSprite(code);
       ctx.drawImage(img, x, y, box, box);
     }
