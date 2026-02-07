@@ -25,9 +25,11 @@ export class Renderer {
     const hudH = 46 * dpr;
 
     // Left eval bar gutter (placeholder for now)
-    const evalW = 16 * dpr;     // width of eval bar
-    const evalPad = 10 * dpr;   // gap between eval bar and board
-    const leftInset = evalW + evalPad;
+    const evalOuterMargin = 10 * dpr;   // space from left screen edge
+    const evalW = 16 * dpr;            // width of eval bar
+    const evalPad = 10 * dpr;          // gap between eval bar and board
+    
+    const leftInset = evalOuterMargin + evalW + evalPad;
 
     // Bottom inset (drawer later). Keep 0 for now, but it's here for future.
     const bottomInset = 0;
@@ -43,7 +45,7 @@ export class Renderer {
     const boardY0 = hudH + (availH - size) / 2;
 
     // Eval bar position (vertically aligned to board)
-    const evalX = (leftInset - evalPad - evalW) / 2; // centered in left gutter
+    const evalX = evalOuterMargin;
     const evalY = boardY0;
     const evalH = size;
 
@@ -174,18 +176,20 @@ export class Renderer {
 
     const pieces = ["q", "r", "b", "n"];
     for (let i = 0; i < 4; i++) {
-      const x = startX + i * (box + gap);
-
-      ctx.fillStyle = "rgba(255,255,255,0.12)";
+      const isBlack = color === "b";
+      
+      ctx.fillStyle = isBlack
+        ? "rgba(255,255,255,0.18)"   // slightly lighter for black pieces
+        : "rgba(255,255,255,0.12)";  // original for white
+      
       ctx.fillRect(x, y, box, box);
-
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      
+      ctx.strokeStyle = isBlack
+        ? "rgba(255,255,255,0.45)"
+        : "rgba(255,255,255,0.35)";
+      
       ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
       ctx.strokeRect(x, y, box, box);
-
-      const code = `${color}${pieces[i]}`;
-      const img = this.getSprite(code);
-      ctx.drawImage(img, x, y, box, box);
     }
   }
 }
