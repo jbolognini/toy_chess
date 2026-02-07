@@ -1,4 +1,4 @@
-const CACHE = "toy_chess_v2";
+const CACHE = "toy_chess";
 const FILES = [
   "./",
   "./index.html",
