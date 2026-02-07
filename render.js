@@ -6,7 +6,7 @@ export class Renderer {
     this.getDebug = getDebug;
 
     this.sprite = new Image();
-    this.sprite.src = "./assets/knight.png";
+    this.sprite.src = "./assets/wb.png";
   }
 
   draw() {
