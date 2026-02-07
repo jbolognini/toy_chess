@@ -208,13 +208,13 @@ export class Renderer {
 
   drawCoords(ctx, x, y, sq, isLight, text, corner, dpr) {
     // Subtle, square-relative font
-    const fontPx = Math.max(9 * dpr, Math.floor(sq * 0.18));
+    const fontPx = Math.max(10 * dpr, Math.floor(sq * 0.18));
     ctx.font = `${fontPx}px ui-monospace, Menlo, monospace`;
   
     // Similar “family” to the square: dark text on light squares, light text on dark squares
     ctx.fillStyle = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.35)";
   
-    const pad = Math.max(2 * dpr, Math.floor(sq * 0.08));
+    const pad = Math.max(2 * dpr, Math.floor(sq * 0.04));
   
     if (corner === "bl") {
       // bottom-left
