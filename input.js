@@ -7,7 +7,19 @@ export class Input {
   }
 
   onDown(e) {
-    // If game over: do not allow selection/moves. Clear any leftover selection.
+    // REVIEW MODE: no board interaction
+    if (this.game.mode === "review") {
+      // Clear any leftover selection if present
+      if (this.game.selected || (this.game.legalTargets && this.game.legalTargets.length)) {
+        this.game.clearSelection();
+      }
+      if (this.game.pendingPromotion) {
+        this.game.clearPromotion();
+      }
+      return;
+    }
+
+    // PLAY MODE only
     if (this.game.isGameOver()) {
       if (this.game.selected || (this.game.legalTargets && this.game.legalTargets.length)) {
         this.game.clearSelection();
@@ -20,9 +32,7 @@ export class Input {
 
     const hit = this.hitTest(e);
 
-    // Tap outside board area:
-    // - cancel promotion if open
-    // - clear selection if any
+    // Tap outside board area: cancel promotion or clear selection
     if (!hit) {
       if (this.game.pendingPromotion) {
         this.game.clearPromotion();
@@ -33,12 +43,11 @@ export class Input {
       return;
     }
 
-    // Promotion chooser active: allow choosing or canceling
+    // Promotion chooser active
     if (this.game.pendingPromotion) {
       if (hit.type === "promo") {
         this.game.finishPromotion(hit.piece);
       } else {
-        // tap elsewhere cancels promotion + selection
         this.game.clearPromotion();
         this.game.clearSelection();
       }
@@ -48,16 +57,13 @@ export class Input {
     // Normal board taps
     const { x, y } = hit;
 
-    // Nothing selected: select or clear
     if (!this.game.selected) {
       this.game.selectSquare(x, y);
       return;
     }
 
-    // Something selected already
     const sel = this.game.selected;
 
-    // Tap selected square again => unselect
     if (x === sel.x && y === sel.y) {
       this.game.clearSelection();
       return;
@@ -67,32 +73,24 @@ export class Input {
     const code = this.game.pieceCodeAt(x, y);
     const hasPiece = !!code;
 
-    // Tap a non-legal empty square => unselect
     if (!isLegalTarget && !hasPiece) {
       this.game.clearSelection();
       return;
     }
 
-    // Tap any other piece
     if (hasPiece) {
-      // If legal => capture/move
       if (isLegalTarget) {
         this.game.tryMoveSelected(x, y);
         return;
       }
-
-      // Not legal: if it's your piece, switch selection
       if (this.game.canSelect(x, y)) {
         this.game.selectSquare(x, y);
         return;
       }
-
-      // Opponent piece not capturable => unselect
       this.game.clearSelection();
       return;
     }
 
-    // Empty square: if legal => move, else unselect
     if (isLegalTarget) {
       this.game.tryMoveSelected(x, y);
       return;
@@ -106,26 +104,24 @@ export class Input {
     const dpr = window.devicePixelRatio || 1;
     const w = this.canvas.width;
     const h = this.canvas.height;
-  
+
     const hudH = 46 * dpr;
-  
-    // Must match render.js
+
+    const evalOuterMargin = 8 * dpr;
     const evalW = 16 * dpr;
     const evalPad = 10 * dpr;
-    const leftInset = evalW + evalPad;
-  
-    const bottomInset = 0;
-  
+    const leftInset = evalOuterMargin + evalW + evalPad;
+
     const availW = Math.max(1, w - leftInset);
-    const availH = Math.max(1, h - hudH - bottomInset);
-  
+    const availH = Math.max(1, h - hudH);
+
     const size = Math.min(availW, availH) * 0.94;
     const sq = size / 8;
-  
+
     const ox = leftInset + (availW - size) / 2;
     const oy = hudH + (availH - size) / 2;
-  
-    return { dpr, w, h, hudH, size, sq, ox, oy, leftInset, bottomInset };
+
+    return { dpr, w, h, hudH, size, sq, ox, oy };
   }
 
   hitTest(e) {
@@ -139,30 +135,24 @@ export class Input {
 
     const geom = this.computeGeom();
 
-    // If promotion chooser is open, allow clicking the chooser (outside board)
+    // Promo chooser hit (outside board)
     if (this.game.pendingPromotion) {
       const promo = this.promoHit(px, py, geom);
       if (promo) return promo;
       // allow normal board click too
     }
 
-    // Board square hit test
     const { sq, ox, oy } = geom;
     const x = Math.floor((px - ox) / sq);
     const y = Math.floor((py - oy) / sq);
 
-    if (x < 0 || x > 7 || y < 0 || y > 7) {
-      // Not on board; if promo is open we still want "something" so taps cancel,
-      // but we already handle !hit as cancel/clear, so return null.
-      return null;
-    }
-
+    if (x < 0 || x > 7 || y < 0 || y > 7) return null;
     return { type: "square", x, y };
   }
 
   promoHit(px, py, geom) {
     const { sq, ox, oy, size } = geom;
-    const { color, to } = this.game.pendingPromotion;
+    const { to } = this.game.pendingPromotion;
 
     const { x: toX, y: toY } = this.game.xyFromSquare(to);
 
@@ -189,22 +179,12 @@ export class Input {
       y = Math.floor(oy + 8 * sq + margin);
     }
 
-    // Hit test each box
     const pieces = ["q", "r", "b", "n"];
     for (let i = 0; i < 4; i++) {
       const x = startX + i * (box + gap);
       if (px >= x && px <= x + box && py >= y && py <= y + box) {
         return { type: "promo", piece: pieces[i] };
       }
-    }
-
-    // If click is inside the small backdrop area, treat as "promo area" (no cancel)
-    const backX = startX - margin;
-    const backY = y - margin;
-    const backW = popupW + margin * 2;
-    const backH = popupH + margin * 2;
-    if (px >= backX && px <= backX + backW && py >= backY && py <= backY + backH) {
-      return { type: "promo-area" };
     }
 
     return null;

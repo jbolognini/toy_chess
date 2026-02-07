@@ -9,28 +9,17 @@
 
     <script>
       // Single bump knob when Safari is stubborn
-      window.APP_VER = 19;
+      window.APP_VER = 20;
     </script>
 
     <script type="module">
       const v = window.APP_VER || 0;
-
-      // If main.js (or any import it depends on) fails, show it ON SCREEN.
-      try {
-        await import(`./main.js?v=${v}`);
-      } catch (e) {
-        const title = document.getElementById("titleText");
-        if (title) title.textContent = `Toy Chess v${v} (LOAD ERROR)`;
-
-        const pre = document.createElement("pre");
-        pre.id = "fatalError";
-        pre.textContent = String(e && (e.stack || e.message) || e);
-        document.body.appendChild(pre);
-      }
+      await import(`./main.js?v=${v}`);
     </script>
   </head>
 
   <body>
+    <!-- TOP BAR (app controls) -->
     <div id="topbar">
       <div id="titleRow">
         <div id="titleText">Toy Chess</div>
@@ -43,6 +32,33 @@
       </div>
     </div>
 
+    <!-- MOVES DRAWER -->
+    <div id="drawer" class="drawer-closed">
+      <div id="drawerHeader">
+        <div id="drawerTitle">Moves</div>
+        <button id="drawerCloseBtn" type="button">Close</button>
+      </div>
+      <div id="movesTable"></div>
+    </div>
+
+    <!-- CANVAS -->
     <canvas id="board"></canvas>
+
+    <!-- BOTTOM BAR (game/review controls) -->
+    <div id="bottombar">
+      <div id="bottomPlay">
+        <button id="movesBtn" type="button">Moves</button>
+        <button id="reviewBtn" type="button">Review</button>
+      </div>
+
+      <div id="bottomReview" class="hidden">
+        <button id="revStartBtn" type="button">⏮</button>
+        <button id="revBackBtn" type="button">⏪</button>
+        <button id="revFwdBtn" type="button">⏩</button>
+        <button id="revEndBtn" type="button">⏭</button>
+        <button id="revCancelBtn" type="button">Cancel</button>
+        <button id="revPlayHereBtn" type="button">Play from here</button>
+      </div>
+    </div>
   </body>
 </html>

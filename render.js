@@ -21,22 +21,16 @@ export class Renderer {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Canvas HUD (status + debug)
     const hudH = 46 * dpr;
 
-    // Left eval bar gutter (placeholder for now)
-    const evalOuterMargin = 10 * dpr;   // space from left screen edge
-    const evalW = 16 * dpr;            // width of eval bar
-    const evalPad = 10 * dpr;          // gap between eval bar and board
-    
+    // Left eval gutter (placeholder)
+    const evalOuterMargin = 8 * dpr;
+    const evalW = 16 * dpr;
+    const evalPad = 10 * dpr;
     const leftInset = evalOuterMargin + evalW + evalPad;
 
-    // Bottom inset (drawer later). Keep 0 for now, but it's here for future.
-    const bottomInset = 0;
-
-    // Available rect for board
     const availW = Math.max(1, w - leftInset);
-    const availH = Math.max(1, h - hudH - bottomInset);
+    const availH = Math.max(1, h - hudH);
 
     const size = Math.min(availW, availH) * 0.94;
     const sq = size / 8;
@@ -44,7 +38,6 @@ export class Renderer {
     const boardX0 = leftInset + (availW - size) / 2;
     const boardY0 = hudH + (availH - size) / 2;
 
-    // Eval bar position (vertically aligned to board)
     const evalX = evalOuterMargin;
     const evalY = boardY0;
     const evalH = size;
@@ -52,8 +45,6 @@ export class Renderer {
     return {
       dpr, w, h,
       hudH,
-      leftInset,
-      bottomInset,
       size, sq,
       ox: boardX0,
       oy: boardY0,
@@ -68,22 +59,22 @@ export class Renderer {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Status line
+    // Status
     ctx.fillStyle = "#ddd";
     ctx.font = `${Math.floor(14 * dpr)}px ui-monospace, Menlo, monospace`;
     ctx.fillText(this.game.statusText(), 10 * dpr, 18 * dpr);
 
-    // Debug line (optional)
+    // Debug (optional)
     const dbg = this.getDebug?.() || "";
     if (dbg) {
       ctx.fillStyle = "#888";
       ctx.fillText(dbg, 10 * dpr, 38 * dpr);
     }
 
-    // Eval bar placeholder (left)
+    // Eval placeholder
     this.drawEvalPlaceholder(ctx, evalRect, dpr);
 
-    // Board squares
+    // Board
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         ctx.fillStyle = (r + c) % 2 === 0 ? "#ddd" : "#666";
@@ -91,24 +82,17 @@ export class Renderer {
       }
     }
 
-    // Selection highlight
+    // Selection highlights (only meaningful in play)
     if (this.game.selected) {
       ctx.fillStyle = "rgba(255,255,0,0.25)";
-      ctx.fillRect(
-        ox + this.game.selected.x * sq,
-        oy + this.game.selected.y * sq,
-        sq,
-        sq
-      );
+      ctx.fillRect(ox + this.game.selected.x * sq, oy + this.game.selected.y * sq, sq, sq);
     }
-
-    // Legal targets highlight
     for (const t of this.game.legalTargets) {
       ctx.fillStyle = "rgba(0,255,0,0.20)";
       ctx.fillRect(ox + t.x * sq, oy + t.y * sq, sq, sq);
     }
 
-    // Pieces
+    // Pieces (from view)
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
         const code = this.game.pieceCodeAt(x, y);
@@ -118,7 +102,7 @@ export class Renderer {
       }
     }
 
-    // Promotion chooser (outside board, clamped)
+    // Promotion chooser (only in play mode)
     if (this.game.pendingPromotion) {
       this.drawPromotionChooser(ctx, geom);
     }
@@ -132,7 +116,6 @@ export class Renderer {
     ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
     ctx.strokeRect(r.x, r.y, r.w, r.h);
 
-    // mid-line placeholder
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
     ctx.lineWidth = Math.max(1, Math.floor(1 * dpr));
     ctx.beginPath();
@@ -170,26 +153,25 @@ export class Renderer {
       y = Math.floor(oy + 8 * sq + margin);
     }
 
-    // Light backdrop just behind chooser
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(startX - margin, y - margin, popupW + margin * 2, popupH + margin * 2);
 
+    const isBlack = color === "b";
     const pieces = ["q", "r", "b", "n"];
+
     for (let i = 0; i < 4; i++) {
-      const isBlack = color === "b";
-      
-      ctx.fillStyle = isBlack
-        ? "rgba(255,255,255,0.18)"   // slightly lighter for black pieces
-        : "rgba(255,255,255,0.12)";  // original for white
-      
+      const x = startX + i * (box + gap);
+
+      ctx.fillStyle = isBlack ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.12)";
       ctx.fillRect(x, y, box, box);
-      
-      ctx.strokeStyle = isBlack
-        ? "rgba(255,255,255,0.45)"
-        : "rgba(255,255,255,0.35)";
-      
+
+      ctx.strokeStyle = isBlack ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.35)";
       ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
       ctx.strokeRect(x, y, box, box);
+
+      const code = `${color}${pieces[i]}`;
+      const img = this.getSprite(code);
+      ctx.drawImage(img, x, y, box, box);
     }
   }
 }

@@ -4,29 +4,49 @@ const FILES = "abcdefgh";
 
 export class Game {
   constructor() {
-    this.chess = new Chess();
+    this.mode = "play"; // "play" | "review"
 
-    // UI state
-    this.selected = null;       // {x,y} or null
-    this.legalTargets = [];     // [{x,y}, ...]
+    this.chessLive = new Chess();
+    this.chessView = new Chess(); // what renderer reads
+    this._syncViewToLive();
 
-    // Promotion UI state: { from:"e7", to:"e8", color:"w"|"b" } or null
-    this.pendingPromotion = null;
+    // UI state (play mode only)
+    this.selected = null;
+    this.legalTargets = [];
 
-    // History
-    this.history = [];
-    this.redoStack = [];
+    // Promotion state (play mode only)
+    this.pendingPromotion = null; // {from,to,color}
+
+    // Move history (applied)
+    this.history = [];    // verbose move objects returned by chess.move(...)
+    this.redoStack = [];  // move objects undone
+
+    // Snapshots (ply-indexed)
+    // snapshots[0] = start position fen (before any move)
+    this.snapshots = [{ ply: 0, san: null, fen: this.chessLive.fen() }];
+
+    // Review cursor: ply index into snapshots (0..history.length)
+    this.reviewPly = 0;
 
     // Versions
     this._uiVersion = 0;
     this._posVersion = 0;
   }
 
-  // --- versions ---
+  // ----- versions -----
   getUIVersion() { return this._uiVersion; }
   getPositionVersion() { return this._posVersion; }
 
-  // --- coordinate mapping: x=0..7, y=0..7 with y=0 at top ---
+  // ----- mode -----
+  setMode(mode) {
+    this.mode = mode;
+    if (mode === "play") {
+      this._syncViewToLive();
+    }
+    this._uiVersion++;
+  }
+
+  // ----- mapping -----
   squareFromXY(x, y) {
     const file = FILES[x];
     const rank = String(8 - y);
@@ -41,60 +61,62 @@ export class Game {
     return { x, y };
   }
 
-  // --- derived state for renderer ---
-  turn() {
-    return this.chess.turn();
+  // ----- view helpers -----
+  _syncViewToLive() {
+    this.chessView.load(this.chessLive.fen());
   }
 
-  fen() {
-    return this.chess.fen();
+  _loadViewPly(ply) {
+    const p = Math.max(0, Math.min(ply, this.history.length));
+    this.reviewPly = p;
+    const fen = this.snapshots[p].fen;
+    this.chessView.load(fen);
+    this._uiVersion++;
   }
+
+  // ----- status / pieces read from VIEW -----
+  turn() { return this.chessView.turn(); }
+
+  fen() { return this.chessLive.fen(); }
 
   pieceCodeAt(x, y) {
     const sq = this.squareFromXY(x, y);
-    const p = this.chess.get(sq);
+    const p = this.chessView.get(sq);
     if (!p) return null;
     return p.color + p.type;
   }
 
-  // --- game over detection ---
+  // ----- game over (LIVE) -----
   isGameOver() {
-    if (typeof this.chess.isGameOver === "function") return this.chess.isGameOver();
-
-    // Fallback if older build
-    const isMate = typeof this.chess.isCheckmate === "function" ? this.chess.isCheckmate() : false;
-    const isStale = typeof this.chess.isStalemate === "function" ? this.chess.isStalemate() : false;
-    const isDraw = typeof this.chess.isDraw === "function" ? this.chess.isDraw() : false;
+    const c = this.chessLive;
+    if (typeof c.isGameOver === "function") return c.isGameOver();
+    const isMate = typeof c.isCheckmate === "function" ? c.isCheckmate() : false;
+    const isStale = typeof c.isStalemate === "function" ? c.isStalemate() : false;
+    const isDraw = typeof c.isDraw === "function" ? c.isDraw() : false;
     return isMate || isStale || isDraw;
   }
 
-  _enforceGameOverUI() {
-    if (!this.isGameOver()) return;
-    let changed = false;
-
-    if (this.pendingPromotion) {
-      this.pendingPromotion = null;
-      changed = true;
-    }
-    if (this.selected || (this.legalTargets && this.legalTargets.length)) {
-      this.selected = null;
-      this.legalTargets = [];
-      changed = true;
-    }
-    if (changed) this._uiVersion++;
-  }
-
-  // --- status line ---
+  // ----- status text from VIEW (so review shows correct turn/check etc) -----
   statusText() {
-    const t = this.turn() === "w" ? "White" : "Black";
+    const c = this.chessView;
+    const t = c.turn() === "w" ? "White" : "Black";
 
-    const inCheck = typeof this.chess.inCheck === "function" ? this.chess.inCheck()
-                  : typeof this.chess.isCheck === "function" ? this.chess.isCheck()
+    const inCheck = typeof c.inCheck === "function" ? c.inCheck()
+                  : typeof c.isCheck === "function" ? c.isCheck()
                   : false;
 
-    const isMate = typeof this.chess.isCheckmate === "function" ? this.chess.isCheckmate() : false;
-    const isStalemate = typeof this.chess.isStalemate === "function" ? this.chess.isStalemate() : false;
-    const isDraw = typeof this.chess.isDraw === "function" ? this.chess.isDraw() : false;
+    const isMate = typeof c.isCheckmate === "function" ? c.isCheckmate() : false;
+    const isStalemate = typeof c.isStalemate === "function" ? c.isStalemate() : false;
+    const isDraw = typeof c.isDraw === "function" ? c.isDraw() : false;
+
+    if (this.mode === "review") {
+      const tag = `Review ${this.reviewPly}/${this.history.length}`;
+      if (isMate) return `Checkmate — ${tag}`;
+      if (isStalemate) return `Stalemate — ${tag}`;
+      if (isDraw) return `Draw — ${tag}`;
+      if (inCheck) return `${t} to move — Check — ${tag}`;
+      return `${t} to move — ${tag}`;
+    }
 
     if (isMate) return "Checkmate";
     if (isStalemate) return "Stalemate";
@@ -103,15 +125,20 @@ export class Game {
     return `${t} to move`;
   }
 
-  // --- selection / move list ---
+  debugLine() {
+    return `mode:${this.mode} ui:${this._uiVersion} pos:${this._posVersion} ply:${this.history.length} rev:${this.reviewPly}`;
+  }
+
+  // ----- selection / moves (PLAY ONLY) -----
   canSelect(x, y) {
+    if (this.mode !== "play") return false;
     if (this.pendingPromotion) return false;
     if (this.isGameOver()) return false;
 
     const sq = this.squareFromXY(x, y);
-    const p = this.chess.get(sq);
+    const p = this.chessLive.get(sq);
     if (!p) return false;
-    return p.color === this.turn();
+    return p.color === this.chessLive.turn();
   }
 
   clearSelection() {
@@ -126,11 +153,9 @@ export class Game {
   }
 
   selectSquare(x, y) {
+    if (this.mode !== "play") return;
     if (this.pendingPromotion) return;
-    if (this.isGameOver()) {
-      this._enforceGameOverUI();
-      return;
-    }
+    if (this.isGameOver()) return;
 
     if (!this.canSelect(x, y)) {
       this.clearSelection();
@@ -140,15 +165,14 @@ export class Game {
     this.selected = { x, y };
 
     const from = this.squareFromXY(x, y);
-    const moves = this.chess.moves({ square: from, verbose: true });
+    const moves = this.chessLive.moves({ square: from, verbose: true });
     this.legalTargets = moves.map((m) => this.xyFromSquare(m.to));
 
     this._uiVersion++;
   }
 
-  // --- promotion helpers ---
   isPromotionMove(fromSq, toSq) {
-    const p = this.chess.get(fromSq);
+    const p = this.chessLive.get(fromSq);
     if (!p) return false;
     if (p.type !== "p") return false;
 
@@ -159,23 +183,30 @@ export class Game {
   }
 
   beginPromotion(fromSq, toSq) {
-    const p = this.chess.get(fromSq);
+    const p = this.chessLive.get(fromSq);
     if (!p) return false;
     this.pendingPromotion = { from: fromSq, to: toSq, color: p.color };
     this._uiVersion++;
     return true;
   }
 
+  _pushSnapshot(moveObj) {
+    const ply = this.history.length;
+    this.snapshots.push({
+      ply,
+      san: moveObj?.san ?? null,
+      fen: this.chessLive.fen()
+    });
+  }
+
   finishPromotion(pieceChar) {
-    if (this.isGameOver()) {
-      this._enforceGameOverUI();
-      return false;
-    }
+    if (this.mode !== "play") return false;
+    if (this.isGameOver()) return false;
     if (!this.pendingPromotion) return false;
 
     const { from, to } = this.pendingPromotion;
 
-    const move = this.chess.move({ from, to, promotion: pieceChar });
+    const move = this.chessLive.move({ from, to, promotion: pieceChar });
     if (!move) {
       this.pendingPromotion = null;
       this._uiVersion++;
@@ -184,9 +215,11 @@ export class Game {
 
     this.history.push(move);
     this.redoStack = [];
+    this._pushSnapshot(move);
 
     this.pendingPromotion = null;
 
+    this._syncViewToLive();
     this._posVersion++;
     this._uiVersion++;
 
@@ -194,17 +227,13 @@ export class Game {
     this.legalTargets = [];
     this._uiVersion++;
 
-    this._enforceGameOverUI();
     return true;
   }
 
-  // --- move ---
   tryMoveSelected(toX, toY) {
+    if (this.mode !== "play") return false;
     if (this.pendingPromotion) return false;
-    if (this.isGameOver()) {
-      this._enforceGameOverUI();
-      return false;
-    }
+    if (this.isGameOver()) return false;
     if (!this.selected) return false;
 
     const from = this.squareFromXY(this.selected.x, this.selected.y);
@@ -212,15 +241,17 @@ export class Game {
 
     if (this.isPromotionMove(from, to)) {
       this.beginPromotion(from, to);
-      return true; // consumed tap
+      return true;
     }
 
-    const move = this.chess.move({ from, to });
+    const move = this.chessLive.move({ from, to });
     if (!move) return false;
 
     this.history.push(move);
     this.redoStack = [];
+    this._pushSnapshot(move);
 
+    this._syncViewToLive();
     this._posVersion++;
     this._uiVersion++;
 
@@ -228,29 +259,36 @@ export class Game {
     this.legalTargets = [];
     this._uiVersion++;
 
-    this._enforceGameOverUI();
     return true;
   }
 
-  // --- undo/redo/reset ---
+  // ----- undo/redo/reset (PLAY ONLY) -----
   undo() {
+    if (this.mode !== "play") return false;
+
     if (this.pendingPromotion) this.pendingPromotion = null;
     this.selected = null;
     this.legalTargets = [];
 
-    const m = this.chess.undo();
+    const m = this.chessLive.undo();
     if (!m) return false;
+
+    // Pop history snapshot
+    this.history.pop();
+    this.snapshots.pop();
 
     this.redoStack.push(m);
 
+    this._syncViewToLive();
     this._posVersion++;
     this._uiVersion++;
 
-    this._enforceGameOverUI();
     return true;
   }
 
   redo() {
+    if (this.mode !== "play") return false;
+
     if (this.pendingPromotion) this.pendingPromotion = null;
     this.selected = null;
     this.legalTargets = [];
@@ -258,23 +296,25 @@ export class Game {
     const m = this.redoStack.pop();
     if (!m) return false;
 
-    const move = this.chess.move({ from: m.from, to: m.to, promotion: m.promotion });
+    const move = this.chessLive.move({ from: m.from, to: m.to, promotion: m.promotion });
     if (!move) {
       this._uiVersion++;
       return false;
     }
 
     this.history.push(move);
+    this._pushSnapshot(move);
 
+    this._syncViewToLive();
     this._posVersion++;
     this._uiVersion++;
 
-    this._enforceGameOverUI();
     return true;
   }
 
   reset() {
-    this.chess.reset();
+    this.chessLive.reset();
+    this._syncViewToLive();
 
     this.selected = null;
     this.legalTargets = [];
@@ -283,7 +323,102 @@ export class Game {
     this.history = [];
     this.redoStack = [];
 
+    this.snapshots = [{ ply: 0, san: null, fen: this.chessLive.fen() }];
+    this.reviewPly = 0;
+
     this._posVersion++;
     this._uiVersion++;
+  }
+
+  // ----- review mode API -----
+  enterReviewAtEnd() {
+    this.selected = null;
+    this.legalTargets = [];
+    this.pendingPromotion = null;
+
+    this.mode = "review";
+    this._loadViewPly(this.history.length);
+  }
+
+  gotoReviewPly(ply) {
+    if (this.mode !== "review") return;
+    this._loadViewPly(ply);
+  }
+
+  exitReviewCancel() {
+    this.mode = "play";
+    this._syncViewToLive();
+    this.selected = null;
+    this.legalTargets = [];
+    this.pendingPromotion = null;
+    this._uiVersion++;
+  }
+
+  playFromHere() {
+    if (this.mode !== "review") return false;
+
+    const targetPly = Math.max(0, Math.min(this.reviewPly, this.history.length));
+
+    // Rebuild live game up to targetPly
+    const keptMoves = this.history.slice(0, targetPly);
+
+    this.chessLive.reset();
+    for (const m of keptMoves) {
+      this.chessLive.move({ from: m.from, to: m.to, promotion: m.promotion });
+    }
+
+    this.history = keptMoves;
+    this.redoStack = [];
+
+    // Rebuild snapshots
+    this.snapshots = [{ ply: 0, san: null, fen: this.chessLive.fen() }];
+    // snapshots need to reflect each move applied
+    // easiest: replay from start again, capturing fen + san each ply
+    const tmp = new Chess();
+    tmp.reset();
+    this.snapshots = [{ ply: 0, san: null, fen: tmp.fen() }];
+    let ply = 0;
+    for (const m of keptMoves) {
+      const mm = tmp.move({ from: m.from, to: m.to, promotion: m.promotion });
+      ply++;
+      this.snapshots.push({ ply, san: mm?.san ?? null, fen: tmp.fen() });
+    }
+
+    this.mode = "play";
+    this.reviewPly = ply;
+
+    this.selected = null;
+    this.legalTargets = [];
+    this.pendingPromotion = null;
+
+    this._syncViewToLive();
+    this._posVersion++;
+    this._uiVersion++;
+
+    return true;
+  }
+
+  // ----- move table rows for drawer -----
+  getMoveRows() {
+    // history is ply-indexed (1..N). snapshots[ply] corresponds to fen after ply.
+    // Build rows: moveNo 1..ceil(N/2) with white ply=2n-1, black ply=2n
+    const N = this.history.length;
+    const rows = [];
+
+    let moveNo = 1;
+    for (let i = 1; i <= N; i += 2) {
+      const w = this.history[i - 1];
+      const b = (i + 1 <= N) ? this.history[i] : null;
+
+      rows.push({
+        moveNo,
+        white: w ? { san: w.san, ply: i } : null,
+        black: b ? { san: b.san, ply: i + 1 } : null
+      });
+
+      moveNo++;
+    }
+
+    return rows;
   }
 }
