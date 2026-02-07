@@ -11,7 +11,7 @@ const FILES = [
   "./engine.js",
   "./engine.worker.js",
   "./manifest.json",
-  "./assets/wn.png"
+  "./assets/wn.png",
   "./assets/wb.png"
 ];
 
@@ -34,7 +34,14 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  e.respondWith(
-    caches.match(e.request).then((r) => r || fetch(e.request))
-  );
+  const req = e.request;
+
+  // Network-first for navigations so updates show up while online
+  if (req.mode === "navigate") {
+    e.respondWith(fetch(req).catch(() => caches.match("./index.html")));
+    return;
+  }
+
+  // Cache-first for everything else (fast + offline)
+  e.respondWith(caches.match(req).then((r) => r || fetch(req)));
 });
