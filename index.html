@@ -9,6 +9,14 @@
 </head>
 <body>
   <canvas id="board"></canvas>
-  <script type="module" src="main.js"></script>
+<script>
+  // Bump this number when Safari refuses to update
+  window.APP_VER = 7;
+</script>
+
+<script type="module">
+  const v = window.APP_VER || 0;
+  import(`./main.js?v=${v}`);
+</script>
 </body>
 </html>

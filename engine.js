@@ -35,4 +35,8 @@ export class Engine {
       }
     });
   }
+  
+  getCurrentGen() {
+    return this.currentGen;
+  }
 }
