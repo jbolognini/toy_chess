@@ -44,7 +44,10 @@ function loop() {
   engine.analyzeIfNeeded();
 
   // Always-visible debug (independent of worker reply)
-  debugText = `${APP_TITLE}  v:${board.getVersion()} gen:${engine.getCurrentGen?.() ?? "?"}`;
+  debugText =
+    `ui:${board.getUIVersion()} ` +
+    `pos:${board.getPositionVersion()} ` +
+    `gen:${engine.getCurrentGen()}`;
 
   renderer.draw();
   requestAnimationFrame(loop);

@@ -28,7 +28,8 @@ export class Renderer {
     // Title line (keep your bumping approach)
     ctx.fillStyle = "white";
     ctx.font = "14px monospace";
-    ctx.fillText("Toy Chess", 10, 20);
+    const ver = window.APP_VER ?? "?";
+    ctx.fillText(`Toy Chess v${ver}`, 10, 20);
 
     const size = Math.min(w, h) * 0.9;
     const sq = size / 8;
