@@ -9,17 +9,66 @@ export class Input {
 
   onDown(e) {
     const pos = this.posToSquare(e);
-    if (!pos) return;
+
+    // Tap outside board => clear selection
+    if (!pos) {
+      if (this.game.selected) this.game.clearSelection();
+      return;
+    }
 
     const { x, y } = pos;
 
-    // If something is selected, try to move it first
-    if (this.game.selected) {
-      if (this.game.tryMoveSelected(x, y)) return;
+    // Nothing selected: try selecting (or clears internally if not selectable)
+    if (!this.game.selected) {
+      this.game.selectSquare(x, y);
+      return;
     }
 
-    // Otherwise select (or clear selection if not selectable)
-    this.game.selectSquare(x, y);
+    // Something is selected already
+    const sel = this.game.selected;
+
+    // Tap selected square again => unselect
+    if (x === sel.x && y === sel.y) {
+      this.game.clearSelection();
+      return;
+    }
+
+    const isLegalTarget = this.game.legalTargets.some((t) => t.x === x && t.y === y);
+    const code = this.game.pieceCodeAt(x, y); // "wn"/"bp"/etc or null
+    const hasPiece = !!code;
+
+    // Tap a non-legal empty square => unselect
+    if (!isLegalTarget && !hasPiece) {
+      this.game.clearSelection();
+      return;
+    }
+
+    // Tap any other piece
+    if (hasPiece) {
+      // If legal => capture/move
+      if (isLegalTarget) {
+        this.game.tryMoveSelected(x, y);
+        return;
+      }
+
+      // Not legal: if it's your piece, switch selection
+      if (this.game.canSelect(x, y)) {
+        this.game.selectSquare(x, y);
+        return;
+      }
+
+      // Opponent piece not capturable => unselect
+      this.game.clearSelection();
+      return;
+    }
+
+    // Empty square: if legal => move, else unselect (shouldn't reach here often)
+    if (isLegalTarget) {
+      this.game.tryMoveSelected(x, y);
+      return;
+    }
+
+    this.game.clearSelection();
   }
 
   posToSquare(e) {
