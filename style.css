@@ -1,7 +1,7 @@
 :root {
   --topbar-h: 76px;     /* title row (32) + controls row (44) */
   --bottombar-h: 44px;  /* game controls */
-  --drawer-h: 23vh;     /* how tall the move drawer is when open */
+  --drawer-h: 20vh;     /* how tall the move drawer is when open */
   --canvas-bottom: var(--bottombar-h); /* updated by JS when drawer opens */
 }
 
@@ -25,23 +25,6 @@ html, body {
 }
 
 .hidden { display: none !important; }
-
-#fatalError {
-  position: fixed;
-  left: 8px;
-  right: 8px;
-  top: calc(var(--topbar-h) + 8px);
-  bottom: 8px;
-  padding: 10px;
-  overflow: auto;
-  background: rgba(0,0,0,0.90);
-  color: #ffdddd;
-  border: 1px solid #553;
-  border-radius: 8px;
-  font: 12px ui-monospace, Menlo, monospace;
-  white-space: pre-wrap;
-  z-index: 9999;
-}
 
 /* TOP BAR */
 #topbar {
@@ -184,4 +167,21 @@ button:active { transform: scale(0.98); }
   width: 100vw;
   height: calc(100vh - var(--topbar-h) - var(--canvas-bottom));
   display: block;
+}
+
+#fatalError {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  max-height: 45vh;
+  padding: 10px;
+  overflow: auto;
+  background: rgba(0,0,0,0.92);
+  color: #ffdddd;
+  border: 1px solid #553;
+  border-radius: 10px;
+  font: 12px ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+  z-index: 9999;
 }

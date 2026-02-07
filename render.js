@@ -163,14 +163,20 @@ export class Renderer {
     if (startX < minX) startX = minX;
     if (startX > maxX) startX = maxX;
 
-    let y;
-    if (toY === 0) {
-      y = Math.floor(oy - popupH - margin);
-      if (y < 0) y = 0;
-    } else {
-      y = Math.floor(oy + 8 * sq + margin);
-    }
-
+    // Always prefer ABOVE the board so the drawer never hides it.
+    // (We don't care if it overlaps the HUD.)
+    const aboveY = Math.floor(oy - popupH - margin);
+    const belowY = Math.floor(oy + 8 * sq + margin);
+    
+    // If above would start above the canvas, fall back to below.
+    let y = (aboveY >= 0) ? aboveY : belowY;
+    
+    // Clamp within canvas so it is always visible
+    const minY = 0;
+    const maxY = Math.max(0, Math.floor(geom.h - popupH));
+    if (y < minY) y = minY;
+    if (y > maxY) y = maxY;
+    
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(startX - margin, y - margin, popupW + margin * 2, popupH + margin * 2);
 

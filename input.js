@@ -171,13 +171,16 @@ export class Input {
     if (startX < minX) startX = minX;
     if (startX > maxX) startX = maxX;
 
-    let y;
-    if (toY === 0) {
-      y = Math.floor(oy - popupH - margin);
-      if (y < 0) y = 0;
-    } else {
-      y = Math.floor(oy + 8 * sq + margin);
-    }
+    // Must match render.js exactly
+    const aboveY = Math.floor(oy - popupH - margin);
+    const belowY = Math.floor(oy + 8 * sq + margin);
+    
+    let y = (aboveY >= 0) ? aboveY : belowY;
+    
+    const minY = 0;
+    const maxY = Math.max(0, Math.floor(geom.h - popupH));
+    if (y < minY) y = minY;
+    if (y > maxY) y = maxY;
 
     const pieces = ["q", "r", "b", "n"];
     for (let i = 0; i < 4; i++) {
