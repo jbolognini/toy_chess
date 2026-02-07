@@ -65,16 +65,15 @@ export class Renderer {
     ctx.fillText(this.game.statusText(), 10 * dpr, 18 * dpr);
 
     // Debug (optional)
-    let dbg = String(this.getDebug?.() ?? "");
-    const tr = (typeof ctx.getTransform === "function") ? ctx.getTransform() : null;
-    if (tr) {
-      dbg = `T:[${tr.a.toFixed(2)},${tr.b.toFixed(2)},${tr.c.toFixed(2)},${tr.d.toFixed(2)},${tr.e.toFixed(1)},${tr.f.toFixed(1)}]  ` + dbg;
-    } else {
-      dbg = "T:[no getTransform]  " + dbg;
+    const dbg = this.getDebug?.();
+    if (dbg) {
+      ctx.fillStyle = "#888";
+      ctx.font = `${Math.floor(12 * dpr)}px ui-monospace, Menlo, monospace`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(dbg, 10 * dpr, 38 * dpr);
     }
-    ctx.fillStyle = "#888";
-    ctx.fillText(dbg, 10 * dpr, 38 * dpr);
-
+    
     // Eval placeholder
     this.drawEvalPlaceholder(ctx, evalRect, dpr);
 
@@ -93,13 +92,13 @@ export class Renderer {
         // File letters along bottom rank (screen bottom row)
         if (r === 7) {
           const fileChar = flipped ? files[7 - c] : files[c];
-          //this.drawCoords(ctx, x, y, sq, isLight, fileChar, "bl", dpr);
+          this.drawCoords(ctx, x, y, sq, isLight, fileChar, "bl", dpr);
         }
     
         // Rank numbers along rightmost file (screen right column)
         if (c === 7) {
           const rankNum = flipped ? String(r + 1) : String(8 - r);
-          //this.drawCoords(ctx, x, y, sq, isLight, rankNum, "tr", dpr);
+          this.drawCoords(ctx, x, y, sq, isLight, rankNum, "tr", dpr);
         }
       }
     }
@@ -211,25 +210,30 @@ export class Renderer {
   }
 
   drawCoords(ctx, x, y, sq, isLight, text, corner, dpr) {
-    // Subtle, square-relative font
-    const fontPx = Math.max(10 * dpr, Math.floor(sq * 0.18));
-    ctx.font = `${fontPx}px ui-monospace, Menlo, monospace`;
+    ctx.save();
+    try {
+      // Subtle, square-relative font
+      const fontPx = Math.max(10 * dpr, Math.floor(sq * 0.18));
+      ctx.font = `${fontPx}px ui-monospace, Menlo, monospace`;
   
-    // Similar “family” to the square: dark text on light squares, light text on dark squares
-    ctx.fillStyle = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.35)";
+      // Similar “family” to the square: dark text on light squares, light text on dark squares
+      ctx.fillStyle = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.35)";
   
-    const pad = Math.max(2 * dpr, Math.floor(sq * 0.04));
+      const pad = Math.max(2 * dpr, Math.floor(sq * 0.02));
   
-    if (corner === "bl") {
-      // bottom-left
-      ctx.textAlign = "left";
-      ctx.textBaseline = "alphabetic";
-      ctx.fillText(text, x + pad, y + sq - pad);
-    } else {
-      // top-right
-      ctx.textAlign = "right";
-      ctx.textBaseline = "top";
-      ctx.fillText(text, x + sq - pad, y + pad);
+      if (corner === "bl") {
+        // bottom-left
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(text, x + pad, y + sq - pad);
+      } else {
+        // top-right
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        ctx.fillText(text, x + sq - pad, y + pad);
+      }
+    } finally {
+      ctx.restore();
     }
   }
 }

@@ -9,26 +9,19 @@
 
     <script>
       // bump this when Safari is stubborn
-      window.APP_VER = 29;
+      window.APP_VER = 30;
     </script>
 
     <script type="module">
       const v = window.APP_VER || 0;
-
+    
       try {
         await import(`./main.js?v=${v}`);
       } catch (e) {
-        const msg = String((e && (e.stack || e.message)) || e);
-
-        // Always visible somewhere (tab title / switcher)
+        const msg = String(e?.stack || e?.message || e);
         document.title = `Toy Chess v${v} (LOAD ERROR)`;
-
-        // Wait until body/titleText exist before touching DOM
+    
         const show = () => {
-          const titleEl = document.getElementById("titleText");
-          if (titleEl) titleEl.textContent = `Toy Chess v${v} (LOAD ERROR)`;
-
-          // Don't duplicate if Safari restored an old node
           let pre = document.getElementById("fatalError");
           if (!pre) {
             pre = document.createElement("pre");
@@ -37,7 +30,7 @@
           }
           pre.textContent = msg;
         };
-
+    
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", show, { once: true });
         } else {

@@ -185,11 +185,4 @@ button:active { transform: scale(0.98); }
   white-space: pre-wrap;
   z-index: 9999;
 }
-/* PROBE: if the 'e 0' is an HTML element, this will make it obvious */
-#fatalError {
-  outline: 4px solid magenta !important;
-  background: rgba(255,0,255,0.15) !important;
-  color: lime !important;
-  font-size: 24px !important;
-  line-height: 1.1 !important;
-}
+

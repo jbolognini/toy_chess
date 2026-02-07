@@ -10,9 +10,8 @@ document.title = APP_TITLE;
 const titleEl = document.getElementById("titleText");
 if (titleEl) titleEl.textContent = APP_TITLE;
 
-// Clean up any stale fatal overlay from previous failed loads
-const oldFatal = document.getElementById("fatalError");
-if (oldFatal) oldFatal.remove();
+// Clean up any stale fatal overlay
+document.getElementById("fatalError")?.remove();
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(`./sw.js?v=${APP_VER}`);
