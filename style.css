@@ -76,3 +76,20 @@ html, body {
   height: calc(100vh - var(--topbar-h));
   display: block;
 }
+
+#fatalError {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  top: calc(var(--topbar-h) + 8px);
+  bottom: 8px;
+  padding: 10px;
+  overflow: auto;
+  background: rgba(0,0,0,0.85);
+  color: #ffdddd;
+  border: 1px solid #553;
+  border-radius: 8px;
+  font: 12px ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+  z-index: 9999;
+}

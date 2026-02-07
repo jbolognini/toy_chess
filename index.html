@@ -9,12 +9,24 @@
 
     <script>
       // Single bump knob when Safari is stubborn
-      window.APP_VER = 16;
+      window.APP_VER = 17;
     </script>
 
     <script type="module">
       const v = window.APP_VER || 0;
-      import(`./main.js?v=${v}`);
+
+      // If main.js (or any import it depends on) fails, show it ON SCREEN.
+      try {
+        await import(`./main.js?v=${v}`);
+      } catch (e) {
+        const title = document.getElementById("titleText");
+        if (title) title.textContent = `Toy Chess v${v} (LOAD ERROR)`;
+
+        const pre = document.createElement("pre");
+        pre.id = "fatalError";
+        pre.textContent = String(e && (e.stack || e.message) || e);
+        document.body.appendChild(pre);
+      }
     </script>
   </head>
 
