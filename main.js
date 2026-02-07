@@ -4,7 +4,12 @@ import { Input } from "./input.js";
 import { Engine } from "./engine.js";
 
 const APP_VER = window.APP_VER || 0;
-document.title = `Toy Chess v${APP_VER}`;
+const APP_TITLE = `Toy Chess v${APP_VER}`;
+
+document.title = APP_TITLE;
+
+const titleEl = document.getElementById("titleText");
+if (titleEl) titleEl.textContent = APP_TITLE;
 
 let debugText = "";
 export function getDebug() {
@@ -12,7 +17,6 @@ export function getDebug() {
 }
 
 if ("serviceWorker" in navigator) {
-  // cache-bust SW script fetch
   navigator.serviceWorker.register(`./sw.js?v=${APP_VER}`);
 }
 
@@ -20,7 +24,7 @@ const canvas = document.getElementById("board");
 const game = new Game();
 
 const engine = new Engine(game, (_evalData) => {
-  // Keep stubbed for now. We display status/debug each frame below.
+  // still stubbed
 });
 
 const renderer = new Renderer(canvas, game, () => debugText);
@@ -35,7 +39,6 @@ function resizeCanvasToCSSSize() {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
 
-  // Match drawing buffer to CSS pixels * DPR for crispness
   const w = Math.max(1, Math.floor(rect.width * dpr));
   const h = Math.max(1, Math.floor(rect.height * dpr));
 

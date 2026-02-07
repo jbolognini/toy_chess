@@ -1,3 +1,7 @@
+:root {
+  --topbar-h: 76px; /* title row (32) + controls row (44) */
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -6,31 +10,51 @@ html, body {
   overflow: hidden;
 }
 
-/* Controls bar: prevent iOS long-press selection/callouts */
-#controls, #controls * {
+/* Top bar: prevent iOS long-press selection/callouts */
+#topbar, #topbar * {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation; /* reduces double-tap zoom weirdness */
+  touch-action: manipulation;
 }
 
-#controls {
+#topbar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  height: var(--topbar-h);
   background: #111;
   border-bottom: 1px solid #222;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
 }
 
-#controls button {
+#titleRow {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#titleText {
+  color: #fff;
+  font: 18px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: 0.2px;
+}
+
+#controlsRow {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+#controlsRow button {
   height: 32px;
   padding: 0 10px;
   border: 0;
@@ -40,15 +64,15 @@ html, body {
   font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-#controls button:active {
+#controlsRow button:active {
   transform: scale(0.98);
 }
 
 #board {
   position: fixed;
   left: 0;
-  top: 44px; /* below controls */
+  top: var(--topbar-h);
   width: 100vw;
-  height: calc(100vh - 44px);
+  height: calc(100vh - var(--topbar-h));
   display: block;
 }

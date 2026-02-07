@@ -11,44 +11,45 @@ export class Renderer {
   getSprite(code) {
     if (this.sprites.has(code)) return this.sprites.get(code);
     const img = new Image();
-    img.src = `./assets/${code}.png`; // wp.png, bn.png, etc
+    img.src = `./assets/${code}.png`;
     this.sprites.set(code, img);
     return img;
   }
 
-  draw() {
-    const ctx = this.ctx;
+  computeGeom() {
+    const dpr = window.devicePixelRatio || 1;
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    ctx.clearRect(0, 0, w, h);
+    // Small HUD inside canvas (status + debug). Title is above in HTML.
+    const hudH = 46 * dpr;
 
-    const dpr = window.devicePixelRatio || 1;
-
-    // HUD: title + status + debug
-    const ver = window.APP_VER ?? "?";
-
-    ctx.fillStyle = "white";
-    ctx.font = `${Math.floor(14 * dpr)}px ui-monospace, Menlo, monospace`;
-    ctx.fillText(`Toy Chess v${ver}`, 10 * dpr, 18 * dpr);
-
-    ctx.font = `${Math.floor(14 * dpr)}px ui-monospace, Menlo, monospace`;
-    ctx.fillStyle = "#ddd";
-    ctx.fillText(this.game.statusText(), 10 * dpr, 38 * dpr);
-
-    const dbg = this.getDebug?.() || "";
-    if (dbg) {
-      ctx.fillStyle = "#aaa";
-      ctx.fillText(dbg, 10 * dpr, 58 * dpr);
-    }
-
-    // Board geometry
-    const topHudPx = 70 * dpr;
-    const availH = Math.max(1, h - topHudPx);
-    const size = Math.min(w, availH) * 0.92;
+    const availH = Math.max(1, h - hudH);
+    const size = Math.min(w, availH) * 0.94;
     const sq = size / 8;
     const ox = (w - size) / 2;
-    const oy = topHudPx + (availH - size) / 2;
+    const oy = hudH + (availH - size) / 2;
+
+    return { dpr, w, h, hudH, size, sq, ox, oy };
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    const { dpr, w, h, hudH, size, sq, ox, oy } = this.computeGeom();
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Status line
+    ctx.fillStyle = "#ddd";
+    ctx.font = `${Math.floor(14 * dpr)}px ui-monospace, Menlo, monospace`;
+    ctx.fillText(this.game.statusText(), 10 * dpr, 18 * dpr);
+
+    // Debug line (optional)
+    const dbg = this.getDebug?.() || "";
+    if (dbg) {
+      ctx.fillStyle = "#888";
+      ctx.fillText(dbg, 10 * dpr, 38 * dpr);
+    }
 
     // Board squares
     for (let r = 0; r < 8; r++) {
@@ -85,31 +86,54 @@ export class Renderer {
       }
     }
 
-    // Promotion overlay
+    // Promotion chooser (outside board, clamped)
     if (this.game.pendingPromotion) {
-      this.drawPromotionOverlay(ctx, w, h, dpr);
+      this.drawPromotionChooser(ctx, { dpr, w, h, sq, ox, oy, size, hudH });
     }
   }
 
-  drawPromotionOverlay(ctx, w, h, dpr) {
-    // Backdrop
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.fillRect(0, 0, w, h);
+  drawPromotionChooser(ctx, geom) {
+    const { dpr, sq, ox, oy, size } = geom;
+    const { color, to } = this.game.pendingPromotion;
 
-    const { color } = this.game.pendingPromotion;
+    // promotion is always to last rank => y is 0 (rank 8) or 7 (rank 1)
+    const { x: toX, y: toY } = this.game.xyFromSquare(to);
 
-    // Layout
-    const box = Math.floor(Math.min(w, h) * 0.14);
-    const gap = Math.floor(12 * dpr);
-    const totalW = box * 4 + gap * 3;
-    const startX = Math.floor((w - totalW) / 2);
-    const y = Math.floor(h * 0.42);
+    const box = Math.floor(sq * 0.78);
+    const gap = Math.floor(sq * 0.08);
+    const margin = Math.floor(sq * 0.12);
+
+    const popupW = box * 4 + gap * 3;
+    const popupH = box;
+
+    // Center the chooser on the promoting file, then clamp to board bounds
+    const centerX = ox + (toX + 0.5) * sq;
+    let startX = Math.floor(centerX - popupW / 2);
+
+    const minX = Math.floor(ox);
+    const maxX = Math.floor(ox + size - popupW);
+    if (startX < minX) startX = minX;
+    if (startX > maxX) startX = maxX;
+
+    // Place outside the board: above if promoting on top rank, below if bottom rank
+    let y;
+    if (toY === 0) {
+      // above board (into HUD area), but never below 0
+      y = Math.floor(oy - popupH - margin);
+      if (y < 0) y = 0;
+    } else {
+      // below board
+      y = Math.floor(oy + 8 * sq + margin);
+    }
+
+    // Slight backdrop behind the chooser (only around chooser, not full-screen)
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(startX - margin, y - margin, popupW + margin * 2, popupH + margin * 2);
 
     const pieces = ["q", "r", "b", "n"];
     for (let i = 0; i < 4; i++) {
       const x = startX + i * (box + gap);
 
-      // Box
       ctx.fillStyle = "rgba(255,255,255,0.12)";
       ctx.fillRect(x, y, box, box);
 
@@ -117,15 +141,9 @@ export class Renderer {
       ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
       ctx.strokeRect(x, y, box, box);
 
-      // Sprite
       const code = `${color}${pieces[i]}`; // wq/wr/wb/wn or bq/...
       const img = this.getSprite(code);
       ctx.drawImage(img, x, y, box, box);
     }
-
-    // Hint text
-    ctx.fillStyle = "#fff";
-    ctx.font = `${Math.floor(16 * dpr)}px ui-monospace, Menlo, monospace`;
-    ctx.fillText("Choose promotion", Math.floor(w * 0.5) - Math.floor(90 * dpr), y - Math.floor(18 * dpr));
   }
 }
