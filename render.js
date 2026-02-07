@@ -158,17 +158,24 @@ export class Renderer {
 
     const isBlack = color === "b";
     const pieces = ["q", "r", "b", "n"];
-
+    
     for (let i = 0; i < 4; i++) {
       const x = startX + i * (box + gap);
-
-      ctx.fillStyle = isBlack ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.12)";
+    
+      // Light gray panels for black pieces (better contrast than translucent white)
+      ctx.fillStyle = isBlack
+        ? "rgba(220,220,220,0.55)"
+        : "rgba(255,255,255,0.12)";
+    
       ctx.fillRect(x, y, box, box);
-
-      ctx.strokeStyle = isBlack ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.35)";
+    
+      ctx.strokeStyle = isBlack
+        ? "rgba(255,255,255,0.55)"
+        : "rgba(255,255,255,0.35)";
+    
       ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
       ctx.strokeRect(x, y, box, box);
-
+    
       const code = `${color}${pieces[i]}`;
       const img = this.getSprite(code);
       ctx.drawImage(img, x, y, box, box);

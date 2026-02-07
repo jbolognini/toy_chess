@@ -36,9 +36,12 @@ function setDrawerOpen(open) {
   }
 }
 
+
 function setMode(mode) {
   // mode: "play" | "review"
   game.setMode(mode);
+
+  document.body.classList.toggle("mode-review", mode === "review");
 
   const playBar = document.getElementById("bottomPlay");
   const reviewBar = document.getElementById("bottomReview");
@@ -55,6 +58,7 @@ function setMode(mode) {
 
   renderMovesTable();
 }
+
 
 // --- Top buttons (app controls) ---
 document.getElementById("undoBtn").addEventListener("click", () => {

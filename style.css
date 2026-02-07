@@ -1,7 +1,7 @@
 :root {
   --topbar-h: 76px;     /* title row (32) + controls row (44) */
-  --bottombar-h: 56px;  /* game controls */
-  --drawer-h: 46vh;     /* how tall the move drawer is when open */
+  --bottombar-h: 44px;  /* game controls */
+  --drawer-h: 23vh;     /* how tall the move drawer is when open */
   --canvas-bottom: var(--bottombar-h); /* updated by JS when drawer opens */
 }
 
@@ -138,18 +138,22 @@ button:active { transform: scale(0.98); }
   border-radius: 8px;
 }
 
+body.mode-review #drawerCloseBtn {
+  display: none !important;
+}
+
 #movesTable {
   overflow: auto;
-  padding: 6px 6px 10px 6px;
+  padding: 4px 6px 8px 6px;
   flex: 1 1 auto;
 }
 
 /* Move table row: 3 columns (num / white / black) */
 .moveRow {
   display: grid;
-  grid-template-columns: 52px 1fr 1fr;
-  gap: 6px;
-  padding: 6px 6px;
+  grid-template-columns: 42px 1fr 1fr; /* tighter move # */
+  gap: 4px;
+  padding: 3px 6px;                   /* tighter row height */
   border-bottom: 1px solid rgba(255,255,255,0.06);
   align-items: center;
 }
@@ -157,17 +161,17 @@ button:active { transform: scale(0.98); }
 .moveNum {
   color: #aaa;
   text-align: right;
-  padding-right: 6px;
-  font: 13px ui-monospace, Menlo, monospace;
+  padding-right: 4px;
+  font: 12px ui-monospace, Menlo, monospace;
 }
 
 .moveCell {
   color: #eee;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 8px;
-  padding: 6px 8px;
-  font: 13px ui-monospace, Menlo, monospace;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 7px;
+  padding: 3px 6px;                   /* tighter cell */
+  font: 12px ui-monospace, Menlo, monospace;
 }
 
 .moveCell.empty {
