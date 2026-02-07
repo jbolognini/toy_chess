@@ -1,21 +1,16 @@
 // engine.worker.js
 self.onmessage = (e) => {
-  const { type, board, gen } = e.data;
+  const { type, gen, fen } = e.data;
+  if (type !== "analyze") return;
 
-  if (type === "analyze") {
-    // --- stub analysis ---
-    const fakeEval = {
-      cp: 12,
-      bestMove: "g1f3",
-      depth: 1
-    };
+  // Stub response
+  const fakeEval = { cp: 0, depth: 0, fenSeen: fen };
 
-    setTimeout(() => {
-      self.postMessage({
-        type: "analysis",
-        gen,
-        eval: fakeEval
-      });
-    }, 50);
-  }
+  setTimeout(() => {
+    self.postMessage({
+      type: "analysis",
+      gen,
+      eval: fakeEval
+    });
+  }, 20);
 };

@@ -1,7 +1,7 @@
 // engine.js
 export class Engine {
-  constructor(board, onEval) {
-    this.board = board;
+  constructor(game, onEval) {
+    this.game = game;
     this.onEval = onEval;
 
     this.worker = new Worker("./engine.worker.js", { type: "module" });
@@ -18,7 +18,7 @@ export class Engine {
   }
 
   analyzeIfNeeded() {
-    const v = this.board.getPositionVersion();
+    const v = this.game.getPositionVersion();
     if (v === this.lastAnalyzedPosVersion) return;
 
     this.lastAnalyzedPosVersion = v;
@@ -27,9 +27,7 @@ export class Engine {
     this.worker.postMessage({
       type: "analyze",
       gen: this.currentGen,
-      board: {
-        pieces: Array.from(this.board.pieces.entries())
-      }
+      fen: this.game.chess.fen()
     });
   }
 

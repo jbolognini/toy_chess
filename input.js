@@ -1,34 +1,35 @@
 // input.js
 export class Input {
-  constructor(canvas, board) {
-    this.board = board;
+  constructor(canvas, game) {
+    this.game = game;
+    this.canvas = canvas;
 
-    canvas.addEventListener("pointerdown", e => this.down(e, canvas));
+    canvas.addEventListener("pointerdown", (e) => this.onDown(e));
   }
 
-  down(e, canvas) {
-    const pos = this.pos(e, canvas);
+  onDown(e) {
+    const pos = this.posToSquare(e);
     if (!pos) return;
 
-    const {x, y} = pos;
+    const { x, y } = pos;
 
-    // If a piece is selected, try to move it
-    if (this.board.selected) {
-      if (this.board.tryMoveSelected(x, y)) return;
+    // If something is selected, try to move it first
+    if (this.game.selected) {
+      if (this.game.tryMoveSelected(x, y)) return;
     }
 
-    // Otherwise select whatever is on this square
-    this.board.selectSquare(x, y);
+    // Otherwise select (or clear selection if not selectable)
+    this.game.selectSquare(x, y);
   }
 
-  pos(e, canvas) {
-    const rect = canvas.getBoundingClientRect();
+  posToSquare(e) {
+    const rect = this.canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
 
-    const w = canvas.width, h = canvas.height;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
 
-    // If you already have a title area, keep it simple: no offset here for now
     const size = Math.min(w, h) * 0.9;
     const sq = size / 8;
     const ox = (w - size) / 2;
@@ -38,6 +39,6 @@ export class Input {
     const y = Math.floor((py - oy) / sq);
 
     if (x < 0 || x > 7 || y < 0 || y > 7) return null;
-    return {x, y};
+    return { x, y };
   }
 }

@@ -1,4 +1,4 @@
-const CACHE = "toy_chess_v7"; // bump when you want to force-update
+const CACHE = "toy_chess_v8"; // bump when you want to force-update
 
 const FILES = [
   "./",
@@ -10,6 +10,8 @@ const FILES = [
   "./input.js",
   "./engine.js",
   "./engine.worker.js",
+  "./game.js",
+  "./lib/chess.mjs",
   "./manifest.json",
 
   // White pieces
