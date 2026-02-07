@@ -75,10 +75,28 @@ export class Renderer {
     this.drawEvalPlaceholder(ctx, evalRect, dpr);
 
     // Board
+    const files = "abcdefgh";
+    const flipped = this.game.flipped === true; // future flip button can set game.flipped
+    
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
-        ctx.fillStyle = (r + c) % 2 === 0 ? "#ddd" : "#666";
-        ctx.fillRect(ox + c * sq, oy + r * sq, sq, sq);
+        const isLight = (r + c) % 2 === 0;
+        ctx.fillStyle = isLight ? "#ddd" : "#666";
+        const x = ox + c * sq;
+        const y = oy + r * sq;
+        ctx.fillRect(x, y, sq, sq);
+    
+        // File letters along bottom rank (screen bottom row)
+        if (r === 7) {
+          const fileChar = flipped ? files[7 - c] : files[c];
+          this.drawCoords(ctx, x, y, sq, isLight, fileChar, "bl", dpr);
+        }
+    
+        // Rank numbers along rightmost file (screen right column)
+        if (c === 7) {
+          const rankNum = flipped ? String(r + 1) : String(8 - r);
+          this.drawCoords(ctx, x, y, sq, isLight, rankNum, "tr", dpr);
+        }
       }
     }
 
@@ -179,6 +197,29 @@ export class Renderer {
       const code = `${color}${pieces[i]}`;
       const img = this.getSprite(code);
       ctx.drawImage(img, x, y, box, box);
+    }
+
+    drawCoords(ctx, x, y, sq, isLight, text, corner, dpr) {
+      // Subtle, square-relative font
+      const fontPx = Math.max(9 * dpr, Math.floor(sq * 0.18));
+      ctx.font = `${fontPx}px ui-monospace, Menlo, monospace`;
+    
+      // Similar “family” to the square: dark text on light squares, light text on dark squares
+      ctx.fillStyle = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.35)";
+    
+      const pad = Math.max(2 * dpr, Math.floor(sq * 0.08));
+    
+      if (corner === "bl") {
+        // bottom-left
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(text, x + pad, y + sq - pad);
+      } else {
+        // top-right
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        ctx.fillText(text, x + sq - pad, y + pad);
+      }
     }
   }
 }

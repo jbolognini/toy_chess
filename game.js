@@ -85,6 +85,10 @@ export class Game {
     if (!p) return null;
     return p.color + p.type;
   }
+  
+  getCurrentPly() {
+    return this.history.length;
+  }
 
   // ----- game over (LIVE) -----
   isGameOver() {

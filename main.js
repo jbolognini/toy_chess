@@ -129,46 +129,92 @@ document.getElementById("revPlayHereBtn").addEventListener("click", () => {
 });
 
 // --- Move table rendering ---
-function renderMovesTable() {
-  const rows = game.getMoveRows(); // [{moveNo, white:{san,ply}, black:{san,ply}}...]
+let lastAutoScrollPly = null;
 
+function renderMovesTable() {
+  const rows = game.getMoveRows();
+  const activePly = (game.mode === "review") ? game.reviewPly : game.getCurrentPly();
+
+  // Rebuild table
   movesTable.innerHTML = "";
+
+  let activeEl = null;
 
   for (const r of rows) {
     const rowEl = document.createElement("div");
     rowEl.className = "moveRow";
 
+    // Move number
     const numEl = document.createElement("div");
     numEl.className = "moveNum";
     numEl.textContent = String(r.moveNo);
     rowEl.appendChild(numEl);
 
+    // White cell
     const wEl = document.createElement("div");
     wEl.className = "moveCell" + (r.white ? "" : " empty");
     wEl.textContent = r.white ? r.white.san : "";
-    if (r.white && game.mode === "review" && game.reviewPly === r.white.ply) wEl.classList.add("active");
+
+    if (r.white && activePly === r.white.ply) {
+      wEl.classList.add("active");
+      activeEl = wEl;
+    }
+
     if (r.white && game.mode === "review") {
       wEl.addEventListener("click", () => {
         game.gotoReviewPly(r.white.ply);
-        renderMovesTable();
       });
     }
+
     rowEl.appendChild(wEl);
 
+    // Black cell
     const bEl = document.createElement("div");
     bEl.className = "moveCell" + (r.black ? "" : " empty");
     bEl.textContent = r.black ? r.black.san : "";
-    if (r.black && game.mode === "review" && game.reviewPly === r.black.ply) bEl.classList.add("active");
+
+    if (r.black && activePly === r.black.ply) {
+      bEl.classList.add("active");
+      activeEl = bEl;
+    }
+
     if (r.black && game.mode === "review") {
       bEl.addEventListener("click", () => {
         game.gotoReviewPly(r.black.ply);
-        renderMovesTable();
       });
     }
+
     rowEl.appendChild(bEl);
 
     movesTable.appendChild(rowEl);
   }
+
+  // Auto-scroll: keep the active ply visible
+  // Only do this when the active ply changes (prevents fighting the user's scroll).
+  if (activeEl && activePly !== lastAutoScrollPly) {
+    lastAutoScrollPly = activePly;
+
+    // Use "nearest" so it doesn't jump too aggressively.
+    activeEl.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "auto"
+    });
+  }
+}
+
+let lastTableSig = "";
+
+function maybeUpdateMovesTable() {
+  const drawerOpen = drawer.classList.contains("drawer-open");
+  const shouldShow = drawerOpen || game.mode === "review";
+  if (!shouldShow) return;
+
+  const sig = `${game.mode}|${game.reviewPly}|${game.getUIVersion()}|${game.getPositionVersion()}|${game.getCurrentPly()}`;
+  if (sig === lastTableSig) return;
+
+  lastTableSig = sig;
+  renderMovesTable();
 }
 
 // --- Canvas sizing ---
@@ -194,12 +240,13 @@ renderMovesTable();
 // Main loop
 function loop() {
   resizeCanvasToCSSSize();
-
+  
   // Engine only in play mode
   if (game.mode === "play") {
     engine.analyzeIfNeeded();
   }
-
+  
+  maybeUpdateMovesTable();
   renderer.draw();
   requestAnimationFrame(loop);
 }
