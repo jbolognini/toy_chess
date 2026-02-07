@@ -214,26 +214,26 @@ export class Renderer {
     try {
       const isDigit = text >= "0" && text <= "9";
   
-      // Base font size relative to square
       const basePx = Math.floor(sq * 0.18);
       const fontPx = Math.max(10 * dpr, Math.floor(basePx * (isDigit ? 0.88 : 1.0)));
   
       ctx.font = `${fontPx}px ui-monospace, Menlo, monospace`;
       ctx.fillStyle = isLight
         ? "rgba(0,0,0,0.35)"
-        : "rgba(255,255,255,0.35)";
-  
-      // Unified padding for both corners
+        : "rgba(255,255,255,0.45)";
+    
       const pad = Math.max(2 * dpr, Math.floor(sq * 0.045));
   
-      ctx.textBaseline = "alphabetic";
-  
       if (corner === "bl") {
+        // bottom-left: anchor on alphabetic baseline near bottom
         ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
         ctx.fillText(text, x + pad, y + sq - pad);
       } else {
+        // top-right: anchor on top baseline near top
         ctx.textAlign = "right";
-        ctx.fillText(text, x + sq - pad, y + sq - pad);
+        ctx.textBaseline = "top";
+        ctx.fillText(text, x + sq - pad, y + pad);
       }
     } finally {
       ctx.restore();
