@@ -25,8 +25,8 @@ export class Renderer {
     const hudH = 46 * dpr;
 
     // Left eval bar gutter (placeholder for now)
-    const evalW = 16 * dpr;          // width of eval bar
-    const evalPad = 10 * dpr;        // gap between eval bar and board
+    const evalW = 16 * dpr;     // width of eval bar
+    const evalPad = 10 * dpr;   // gap between eval bar and board
     const leftInset = evalW + evalPad;
 
     // Bottom inset (drawer later). Keep 0 for now, but it's here for future.
@@ -55,14 +55,14 @@ export class Renderer {
       size, sq,
       ox: boardX0,
       oy: boardY0,
-      eval: { x: evalX, y: evalY, w: evalW, h: evalH }
+      evalRect: { x: evalX, y: evalY, w: evalW, h: evalH }
     };
   }
 
   draw() {
     const ctx = this.ctx;
     const geom = this.computeGeom();
-    const { dpr, w, h, sq, ox, oy, eval } = geom;
+    const { dpr, w, h, sq, ox, oy, evalRect } = geom;
 
     ctx.clearRect(0, 0, w, h);
 
@@ -79,7 +79,7 @@ export class Renderer {
     }
 
     // Eval bar placeholder (left)
-    this.drawEvalPlaceholder(ctx, eval, dpr);
+    this.drawEvalPlaceholder(ctx, evalRect, dpr);
 
     // Board squares
     for (let r = 0; r < 8; r++) {
@@ -122,20 +122,20 @@ export class Renderer {
     }
   }
 
-  drawEvalPlaceholder(ctx, eval, dpr) {
+  drawEvalPlaceholder(ctx, r, dpr) {
     ctx.fillStyle = "rgba(255,255,255,0.06)";
-    ctx.fillRect(eval.x, eval.y, eval.w, eval.h);
+    ctx.fillRect(r.x, r.y, r.w, r.h);
 
     ctx.strokeStyle = "rgba(255,255,255,0.25)";
     ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
-    ctx.strokeRect(eval.x, eval.y, eval.w, eval.h);
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
 
     // mid-line placeholder
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
     ctx.lineWidth = Math.max(1, Math.floor(1 * dpr));
     ctx.beginPath();
-    ctx.moveTo(eval.x, eval.y + eval.h / 2);
-    ctx.lineTo(eval.x + eval.w, eval.y + eval.h / 2);
+    ctx.moveTo(r.x, r.y + r.h / 2);
+    ctx.lineTo(r.x + r.w, r.y + r.h / 2);
     ctx.stroke();
   }
 
