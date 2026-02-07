@@ -93,13 +93,13 @@ export class Renderer {
         // File letters along bottom rank (screen bottom row)
         if (r === 7) {
           const fileChar = flipped ? files[7 - c] : files[c];
-          this.drawCoords(ctx, x, y, sq, isLight, fileChar, "bl", dpr);
+          //this.drawCoords(ctx, x, y, sq, isLight, fileChar, "bl", dpr);
         }
     
         // Rank numbers along rightmost file (screen right column)
         if (c === 7) {
           const rankNum = flipped ? String(r + 1) : String(8 - r);
-          this.drawCoords(ctx, x, y, sq, isLight, rankNum, "tr", dpr);
+          //this.drawCoords(ctx, x, y, sq, isLight, rankNum, "tr", dpr);
         }
       }
     }
