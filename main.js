@@ -3,7 +3,7 @@ import { Renderer } from "./render.js";
 import { Input } from "./input.js";
 import { Engine } from "./engine.js";
 
-const APP_TITLE = "Toy Chess v0.0.3"; // <-- bump this on commits
+const APP_TITLE = "Toy Chess v0.0.4"; // <-- bump this on commits
 document.title = APP_TITLE;
 
 let debugText = "";
