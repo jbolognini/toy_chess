@@ -1,4 +1,4 @@
-const CACHE = "toy_chess_v4"; // bump when you want to force-update
+const CACHE = "toy_chess_v5"; // bump when you want to force-update
 
 const FILES = [
   "./",

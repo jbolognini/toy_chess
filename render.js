@@ -6,7 +6,7 @@ export class Renderer {
     this.getDebug = getDebug;
 
     this.sprite = new Image();
-    this.sprite.src = "./assets/wb.png";
+    this.sprite.src = "./assets/wn.png";
   }
 
   draw() {
@@ -14,12 +14,10 @@ export class Renderer {
     const w = this.canvas.width;
     const h = this.canvas.height;
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "magenta";
-    ctx.fillRect(0, 0, w, h);
     
     ctx.fillStyle = "white";
     ctx.font = "14px monospace";
-    ctx.fillText("Toy Chess v0.0.3", 10, 20);
+    ctx.fillText("Toy Chess v0.0.5", 10, 20);
 
     const size = Math.min(w, h) * 0.9;
     const sq = size / 8;
