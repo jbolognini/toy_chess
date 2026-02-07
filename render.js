@@ -14,6 +14,10 @@ export class Renderer {
     const w = this.canvas.width;
     const h = this.canvas.height;
     ctx.clearRect(0, 0, w, h);
+    
+    ctx.fillStyle = "white";
+    ctx.font = "14px monospace";
+    ctx.fillText("Toy Chess v0.0.3", 10, 20);
 
     const size = Math.min(w, h) * 0.9;
     const sq = size / 8;
@@ -40,7 +44,7 @@ export class Renderer {
     if (dbg) {
       ctx.fillStyle = "white";
       ctx.font = "14px monospace";
-      ctx.fillText(dbg, 10, 20);
+      ctx.fillText(dbg, 10, 40);
     }
   }
 }
