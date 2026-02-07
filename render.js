@@ -1,8 +1,9 @@
 export class Renderer {
-  constructor(canvas, board) {
+  constructor(canvas, board, getDebug) {
     this.ctx = canvas.getContext("2d");
     this.canvas = canvas;
     this.board = board;
+    this.getDebug = getDebug;
 
     this.sprite = new Image();
     this.sprite.src = "./assets/knight.png";
@@ -34,5 +35,12 @@ export class Renderer {
       sq,
       sq
     );
+
+    const dbg = this.getDebug();
+    if (dbg) {
+      ctx.fillStyle = "white";
+      ctx.font = "14px monospace";
+      ctx.fillText(dbg, 10, 20);
+    }
   }
 }

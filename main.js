@@ -3,14 +3,24 @@ import { Renderer } from "./render.js";
 import { Input } from "./input.js";
 import { Engine } from "./engine.js";
 
+let debugText = "";
+
+export function getDebug() {
+  return debugText;
+}
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js");
 }
 
 const canvas = document.getElementById("board");
 const board = new Board();
-const renderer = new Renderer(canvas, board);
-const engine = new Engine(board);
+
+const engine = new Engine(board, (evalData) => {
+  debugText = `cp: ${evalData.cp}`;
+});
+
+const renderer = new Renderer(canvas, board, () => debugText);
 new Input(canvas, board);
 
 function resize() {
@@ -21,7 +31,7 @@ window.addEventListener("resize", resize);
 resize();
 
 function loop() {
-  engine.tick();
+  engine.analyzeIfNeeded();
   renderer.draw();
   requestAnimationFrame(loop);
 }
