@@ -12,27 +12,45 @@ export function getDebug() {
 }
 
 if ("serviceWorker" in navigator) {
+  // cache-bust SW script fetch
   navigator.serviceWorker.register(`./sw.js?v=${APP_VER}`);
 }
 
 const canvas = document.getElementById("board");
 const game = new Game();
 
-const engine = new Engine(game, (evalData) => {
-  // You can show eval later; debugText below overwrites each frame on purpose.
+const engine = new Engine(game, (_evalData) => {
+  // Keep stubbed for now. We display status/debug each frame below.
 });
 
 const renderer = new Renderer(canvas, game, () => debugText);
 new Input(canvas, game);
 
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+// Controls
+document.getElementById("undoBtn").addEventListener("click", () => game.undo());
+document.getElementById("redoBtn").addEventListener("click", () => game.redo());
+document.getElementById("resetBtn").addEventListener("click", () => game.reset());
+
+function resizeCanvasToCSSSize() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+
+  // Match drawing buffer to CSS pixels * DPR for crispness
+  const w = Math.max(1, Math.floor(rect.width * dpr));
+  const h = Math.max(1, Math.floor(rect.height * dpr));
+
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
 }
-window.addEventListener("resize", resize);
-resize();
+
+window.addEventListener("resize", resizeCanvasToCSSSize);
+resizeCanvasToCSSSize();
 
 function loop() {
+  resizeCanvasToCSSSize();
+
   engine.analyzeIfNeeded();
 
   debugText =

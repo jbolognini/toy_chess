@@ -1,4 +1,3 @@
-// engine.js
 export class Engine {
   constructor(game, onEval) {
     this.game = game;
@@ -27,7 +26,7 @@ export class Engine {
     this.worker.postMessage({
       type: "analyze",
       gen: this.currentGen,
-      fen: this.game.chess.fen()
+      fen: this.game.fen()
     });
   }
 

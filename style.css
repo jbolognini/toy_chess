@@ -1,12 +1,54 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #111;
   height: 100%;
+  background: #111;
   overflow: hidden;
 }
 
-canvas {
+/* Controls bar: prevent iOS long-press selection/callouts */
+#controls, #controls * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* reduces double-tap zoom weirdness */
+}
+
+#controls {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #111;
+  border-bottom: 1px solid #222;
+  z-index: 10;
+}
+
+#controls button {
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: #333;
+  color: #fff;
+  font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+#controls button:active {
+  transform: scale(0.98);
+}
+
+#board {
+  position: fixed;
+  left: 0;
+  top: 44px; /* below controls */
+  width: 100vw;
+  height: calc(100vh - 44px);
   display: block;
-  touch-action: none;
 }
