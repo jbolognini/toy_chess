@@ -212,25 +212,28 @@ export class Renderer {
   drawCoords(ctx, x, y, sq, isLight, text, corner, dpr) {
     ctx.save();
     try {
-      // Subtle, square-relative font
-      const fontPx = Math.max(10 * dpr, Math.floor(sq * 0.18));
+      const isDigit = text >= "0" && text <= "9";
+  
+      // Base font size relative to square
+      const basePx = Math.floor(sq * 0.18);
+      const fontPx = Math.max(10 * dpr, Math.floor(basePx * (isDigit ? 0.88 : 1.0)));
+  
       ctx.font = `${fontPx}px ui-monospace, Menlo, monospace`;
+      ctx.fillStyle = isLight
+        ? "rgba(0,0,0,0.35)"
+        : "rgba(255,255,255,0.35)";
   
-      // Similar “family” to the square: dark text on light squares, light text on dark squares
-      ctx.fillStyle = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.35)";
+      // Unified padding for both corners
+      const pad = Math.max(2 * dpr, Math.floor(sq * 0.045));
   
-      const pad = Math.max(2 * dpr, Math.floor(sq * 0.02));
+      ctx.textBaseline = "alphabetic";
   
       if (corner === "bl") {
-        // bottom-left
         ctx.textAlign = "left";
-        ctx.textBaseline = "alphabetic";
         ctx.fillText(text, x + pad, y + sq - pad);
       } else {
-        // top-right
         ctx.textAlign = "right";
-        ctx.textBaseline = "top";
-        ctx.fillText(text, x + sq - pad, y + pad);
+        ctx.fillText(text, x + sq - pad, y + sq - pad);
       }
     } finally {
       ctx.restore();
