@@ -78,10 +78,6 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 });
 
 // --- Drawer controls ---
-document.getElementById("drawerCloseBtn").addEventListener("click", () => {
-  if (game.mode === "review") return; // in review, close is handled by Cancel
-  setDrawerOpen(false);
-});
 
 // --- Bottom PLAY controls ---
 document.getElementById("movesBtn").addEventListener("click", () => {

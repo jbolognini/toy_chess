@@ -117,34 +117,9 @@ button:active { transform: scale(0.98); }
   transform: translateY(0%);
 }
 
-#drawerHeader {
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-  border-bottom: 1px solid #222;
-  flex: 0 0 auto;
-}
-
-#drawerTitle {
-  color: #fff;
-  font: 14px ui-monospace, Menlo, monospace;
-}
-
-#drawerCloseBtn {
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 8px;
-}
-
-body.mode-review #drawerCloseBtn {
-  display: none !important;
-}
-
 #movesTable {
   overflow: auto;
-  padding: 4px 6px 8px 6px;
+  padding: 4px 6px 8px 6px; /* small padding only */
   flex: 1 1 auto;
 }
 
