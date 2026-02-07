@@ -65,11 +65,15 @@ export class Renderer {
     ctx.fillText(this.game.statusText(), 10 * dpr, 18 * dpr);
 
     // Debug (optional)
-    const dbg = this.getDebug?.() || "";
-    if (dbg) {
-      ctx.fillStyle = "#888";
-      ctx.fillText(dbg, 10 * dpr, 38 * dpr);
+    let dbg = String(this.getDebug?.() ?? "");
+    const tr = (typeof ctx.getTransform === "function") ? ctx.getTransform() : null;
+    if (tr) {
+      dbg = `T:[${tr.a.toFixed(2)},${tr.b.toFixed(2)},${tr.c.toFixed(2)},${tr.d.toFixed(2)},${tr.e.toFixed(1)},${tr.f.toFixed(1)}]  ` + dbg;
+    } else {
+      dbg = "T:[no getTransform]  " + dbg;
     }
+    ctx.fillStyle = "#888";
+    ctx.fillText(dbg, 10 * dpr, 38 * dpr);
 
     // Eval placeholder
     this.drawEvalPlaceholder(ctx, evalRect, dpr);
