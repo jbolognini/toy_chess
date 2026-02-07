@@ -1,4 +1,4 @@
-const CACHE = "toy_chess_v3"; // bump when you want to force-update
+const CACHE = "toy_chess_v4"; // bump when you want to force-update
 
 const FILES = [
   "./",
@@ -11,7 +11,8 @@ const FILES = [
   "./engine.js",
   "./engine.worker.js",
   "./manifest.json",
-  "./assets/knight.png"
+  "./assets/wn.png"
+  "./assets/wb.png"
 ];
 
 self.addEventListener("install", (e) => {
