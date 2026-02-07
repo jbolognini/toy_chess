@@ -17,7 +17,7 @@ export class Renderer {
     
     ctx.fillStyle = "white";
     ctx.font = "14px monospace";
-    ctx.fillText("Toy Chess v0.0.5", 10, 20);
+    ctx.fillText("Toy Chess v0.0.6", 10, 20);
 
     const size = Math.min(w, h) * 0.9;
     const sq = size / 8;
