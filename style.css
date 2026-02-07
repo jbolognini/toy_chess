@@ -26,6 +26,23 @@ html, body {
 
 .hidden { display: none !important; }
 
+#fatalError {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  top: calc(var(--topbar-h) + 8px);
+  bottom: 8px;
+  padding: 10px;
+  overflow: auto;
+  background: rgba(0,0,0,0.90);
+  color: #ffdddd;
+  border: 1px solid #553;
+  border-radius: 8px;
+  font: 12px ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+  z-index: 9999;
+}
+
 /* TOP BAR */
 #topbar {
   position: fixed;

@@ -8,18 +8,28 @@
     <title>Toy Chess</title>
 
     <script>
-      // Single bump knob when Safari is stubborn
-      window.APP_VER = 23;
+      // bump this when Safari is stubborn
+      window.APP_VER = 24;
     </script>
 
     <script type="module">
       const v = window.APP_VER || 0;
-      await import(`./main.js?v=${v}`);
+
+      try {
+        await import(`./main.js?v=${v}`);
+      } catch (e) {
+        const title = document.getElementById("titleText");
+        if (title) title.textContent = `Toy Chess v${v} (LOAD ERROR)`;
+
+        const pre = document.createElement("pre");
+        pre.id = "fatalError";
+        pre.textContent = String((e && (e.stack || e.message)) || e);
+        document.body.appendChild(pre);
+      }
     </script>
   </head>
 
   <body>
-    <!-- TOP BAR (app controls) -->
     <div id="topbar">
       <div id="titleRow">
         <div id="titleText">Toy Chess</div>
@@ -32,15 +42,12 @@
       </div>
     </div>
 
-    <!-- MOVES DRAWER -->
     <div id="drawer" class="drawer-closed">
       <div id="movesTable"></div>
     </div>
 
-    <!-- CANVAS -->
     <canvas id="board"></canvas>
 
-    <!-- BOTTOM BAR (game/review controls) -->
     <div id="bottombar">
       <div id="bottomPlay">
         <button id="movesBtn" type="button">Moves</button>
