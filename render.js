@@ -391,8 +391,23 @@ export class Renderer {
       
       // Visibility: strongest near equal, never invisible
       const n = this._eval.norm; // [-1..+1]
-      const nearEqual = 1 - Math.min(1, Math.abs(n) * 1.35);
-      const alpha = 0.22 + 0.48 * nearEqual;
+      // Fade control: stark near equal, aggressive fade after ~±200cp (“±2 eval”)
+      // n is [-1..+1] where 1 ~= CLAMP_CP, so map back to cp using your clamp.
+      const CLAMP_CP = 600;                  // must match your cp->norm clamp
+      const cpAbs = Math.abs(n) * CLAMP_CP;  // 0..CLAMP_CP
+      
+      const FADE_START_CP = 200;  // stay strong up to here
+      const FADE_END_CP   = 400;  // mostly gone by here
+      
+      // 1.0 when <= start, 0.0 when >= end
+      let t = 1 - (cpAbs - FADE_START_CP) / (FADE_END_CP - FADE_START_CP);
+      t = Math.max(0, Math.min(1, t));
+      
+      // Make it drop *hard* after the start (aggressive fade)
+      const nearEqual = t * t;   // square = more aggressive than linear
+      
+      // Alpha: strong when near equal, quickly fades out past ±2
+      const alpha = 0.06 + 0.70 * nearEqual;
       
       // Opposite color of the background at midline
       ctx.strokeStyle = midIsInBlack

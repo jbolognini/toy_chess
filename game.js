@@ -14,6 +14,15 @@ export class Game {
     this.selected = null;
     this.legalTargets = [];
     this.lastMove = null; // { from:{x,y}, to:{x,y} } or null
+    
+    // Captured material (derived from history up to displayed ply)
+    // Stored as piece codes like "bp", "wn" etc. (captured piece, not capturer)
+    this.capturedByWhite = []; // white captured black pieces (e.g., "bp","bq")
+    this.capturedByBlack = []; // black captured white pieces (e.g., "wp","wn")
+
+    // Material advantage text: only one side shows +V, other shows "", equal shows ""
+    this.materialPlusWhite = ""; // e.g. "+3" or ""
+    this.materialPlusBlack = ""; // e.g. "+2" or ""
 
     // Promotion state (play mode only)
     this.pendingPromotion = null; // {from,to,color}
@@ -79,20 +88,21 @@ export class Game {
   updateDerivedAfterViewChange() {
     // Determine displayed ply
     const ply = (this.mode === "review") ? this.reviewPly : this.history.length;
-  
+
     // lastMove should be the move that led to this ply
     if (ply <= 0) {
       this.lastMove = null;
     } else {
-      // You need move-by-ply access. Use whatever you already store.
-      // Preferred: store UCI per ply, or {from,to,promo} per ply.
-      const m = this.moveAtPly(ply - 1); // <- implement / adapt
+      const m = this.moveAtPly(ply - 1);
       this.lastMove = m ? { from: { x: m.fromX, y: m.fromY }, to: { x: m.toX, y: m.toY } } : null;
     }
-  
+
+    // Captures/material are derived from history slice [0..ply)
+    this._rebuildCapturedFromHistory(ply);
+
     // Any other derived UI state can be refreshed here later
   }
-
+  
   // ----- status / pieces read from VIEW -----
   turn() { return this.chessView.turn(); }
 
@@ -249,7 +259,8 @@ export class Game {
     this.selected = null;
     this.legalTargets = [];
     this._uiVersion++;
-
+    this.updateDerivedAfterViewChange();
+    
     return true;
   }
 
@@ -303,6 +314,144 @@ export class Game {
       toY: t.y,
       promotion: m.promotion || null
     };
+  }
+
+  // ============================================================
+  // Captured material + material advantage (derived)
+  // ============================================================
+
+  _rebuildCapturedFromHistory(ply) {
+    const p = Math.max(0, Math.min(ply, this.history.length));
+
+    this.capturedByWhite = [];
+    this.capturedByBlack = [];
+
+    // Rebuild captures from move list up to ply
+    for (let i = 0; i < p; i++) {
+      const m = this.history[i];
+      if (!m) continue;
+
+      // chess.js verbose moves usually include:
+      // - m.color: "w"|"b" (side that moved)
+      // - m.captured: "p"|"n"|"b"|"r"|"q" when capture occurred
+      const mover = m.color;          // capturer
+      const capType = m.captured;     // captured piece type (lowercase)
+
+      if (!capType || (capType !== "p" && capType !== "n" && capType !== "b" && capType !== "r" && capType !== "q")) {
+        continue;
+      }
+
+      // Captured piece color is the opponent of mover
+      if (mover === "w") {
+        this.capturedByWhite.push("b" + capType);
+      } else if (mover === "b") {
+        this.capturedByBlack.push("w" + capType);
+      }
+    }
+
+    // Material advantage text (single-side, positive only)
+    const adv = this._computeMaterialAdvantage(this.capturedByWhite, this.capturedByBlack);
+    if (adv > 0) {
+      this.materialPlusWhite = `+${adv}`;
+      this.materialPlusBlack = "";
+    } else if (adv < 0) {
+      this.materialPlusWhite = "";
+      this.materialPlusBlack = `+${Math.abs(adv)}`;
+    } else {
+      this.materialPlusWhite = "";
+      this.materialPlusBlack = "";
+    }
+  }
+
+  _computeMaterialAdvantage(capturedByWhite, capturedByBlack) {
+    // capturedByWhite are black pieces white took
+    // capturedByBlack are white pieces black took
+    // Advantage is remaining material (ignoring kings), computed via net capture differential.
+    const values = { q: 9, r: 5, b: 3, n: 3, p: 1 };
+
+    const wCounts = this._countCapturedTypes(capturedByWhite); // by type of captured piece (q,r,b,n,p)
+    const bCounts = this._countCapturedTypes(capturedByBlack);
+
+    // Net = whiteCaptured - blackCaptured per type
+    let whiteAdv = 0;
+    for (const t of ["q", "r", "b", "n", "p"]) {
+      const net = (wCounts[t] || 0) - (bCounts[t] || 0);
+      whiteAdv += net * values[t];
+    }
+    // Positive => White is up material, negative => Black up
+    return whiteAdv;
+  }
+
+  _countCapturedTypes(capturedList) {
+    const out = { q: 0, r: 0, b: 0, n: 0, p: 0 };
+    for (const code of capturedList || []) {
+      // code looks like "bq" or "wp"
+      const t = code[1];
+      if (t in out) out[t]++;
+    }
+    return out;
+  }
+
+  getCapturedByWhite() { return this.capturedByWhite; }
+  getCapturedByBlack() { return this.capturedByBlack; }
+
+  // Grouped list for display: value-desc, pawns last (Q R B N P)
+  // Returns array of codes like ["bq","br","br","bp",...]
+  getCapturedGrouped(capturerColor /* "w"|"b" */) {
+    const list = (capturerColor === "w") ? this.capturedByWhite
+               : (capturerColor === "b") ? this.capturedByBlack
+               : [];
+
+    const counts = this._countCapturedTypes(list);
+    const victimColor = (capturerColor === "w") ? "b" : "w";
+
+    const order = ["q", "r", "b", "n", "p"];
+    const out = [];
+    for (const t of order) {
+      const n = counts[t] || 0;
+      for (let i = 0; i < n; i++) out.push(victimColor + t);
+    }
+    return out;
+  }
+
+  // Differential grouped list (fallback mode):
+  // Cancels equal types and returns only the remainder for each side.
+  // Returns { white: [codes...], black: [codes...] } where arrays are grouped Q R B N P.
+  getCapturedDifferentialGrouped() {
+    const wCounts = this._countCapturedTypes(this.capturedByWhite);
+    const bCounts = this._countCapturedTypes(this.capturedByBlack);
+
+    const order = ["q", "r", "b", "n", "p"];
+    const wOut = [];
+    const bOut = [];
+
+    for (const t of order) {
+      const net = (wCounts[t] || 0) - (bCounts[t] || 0);
+      if (net > 0) {
+        for (let i = 0; i < net; i++) wOut.push("b" + t); // white is ahead: show black pieces captured extra
+      } else if (net < 0) {
+        for (let i = 0; i < -net; i++) bOut.push("w" + t); // black is ahead: show white pieces captured extra
+      }
+    }
+
+    return { white: wOut, black: bOut };
+  }
+
+  // Convenience: which capturer is "bottom" given flipped?
+  // flipped=false => bottom is White, flipped=true => bottom is Black
+  getBottomCapturerColor() {
+    return (this.flipped === true) ? "b" : "w";
+  }
+
+  getTopCapturerColor() {
+    return (this.flipped === true) ? "w" : "b";
+  }
+
+  // Material plus string for capturer ("w"|"b") — only one side returns "+V", other returns "".
+  getMaterialPlusForColor(color /* "w"|"b" */) {
+    return (color === "w") ? (this.materialPlusWhite || "")
+         : (color === "b") ? (this.materialPlusBlack || "")
+         : "";
   }
 
   // ----- undo/redo/reset (PLAY ONLY) -----

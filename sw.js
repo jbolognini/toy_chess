@@ -29,7 +29,15 @@ const FILES = [
   "./assets/bb.png",
   "./assets/br.png",
   "./assets/bq.png",
-  "./assets/bk.png"
+  "./assets/bk.png",
+
+  // White pieces
+  "./assets/wp_halo.png",
+  "./assets/wn_halo.png",
+  "./assets/wb_halo.png",
+  "./assets/wr_halo.png",
+  "./assets/wq_halo.png",
+  "./assets/wk_halo.png"
 ];
 
 self.addEventListener("install", (e) => {
