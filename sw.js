@@ -1,10 +1,11 @@
-const CACHE = "toy_chess_v9"; // bump when you want to force-update
+const CACHE = "toy_chess_v10"; // bump when you want to force-update
 
 const FILES = [
   "./",
   "./index.html",
   "./style.css",
   "./main.js",
+  "./theme.js",
   "./board.js",
   "./render.js",
   "./input.js",

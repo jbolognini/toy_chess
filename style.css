@@ -5,11 +5,40 @@
   --canvas-bottom: var(--bottombar-h); /* updated by JS when drawer opens */
 }
 
+:root {
+  /* App surfaces */
+  --app-bg: #222;
+  --bar-bg: #2a2a2a;
+  --drawer-bg: #262626;
+
+  /* Text */
+  --text: #d0d0d0;
+  --text-muted: #9a9a9a;
+
+  /* Board */
+  --board-light: #e0e0e0;
+  --board-dark: #6a6a6a;
+
+  /* Overlays */
+  --ov-last-from: rgba(255, 215,   0, 0.26);
+  --ov-last-to:   rgba(255, 235,  90, 0.38);
+  --ov-selected:  rgba(255, 255,   0, 0.22);
+  --ov-legal:     rgba(  0, 255,   0, 0.16);
+  --ov-capture:   rgba(255,   0,   0, 0.18);
+  --ov-check:     rgba(255,   0,   0, 0.22);
+
+  /* Eval bar */
+  --eval-track: rgba(255,255,255,0.04);
+  --eval-white: rgba(255,255,255,0.70);
+  --eval-black: rgba(0,0,0,0.70);
+}
+
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #222;
+  background: var(--app-bg);
+  color: var(--text);
   overflow: hidden;
 }
 
@@ -33,7 +62,7 @@ html, body {
   left: 0;
   right: 0;
   height: var(--topbar-h);
-  background: #111;
+  background: var(--bar-bg);
   border-bottom: 1px solid #222;
   z-index: 30;
   display: flex;
@@ -81,7 +110,7 @@ button:active { transform: scale(0.98); }
   right: 0;
   bottom: 0;
   height: var(--bottombar-h);
-  background: #111;
+  background: var(--bar-bg);
   border-top: 1px solid #222;
   z-index: 30;
   display: flex;
@@ -104,7 +133,7 @@ button:active { transform: scale(0.98); }
   right: 0;
   bottom: var(--bottombar-h);
   height: var(--drawer-h);
-  background: #141414;
+  var(--drawer-bg);
   border-top: 1px solid #2a2a2a;
   z-index: 25;
   transform: translateY(100%);

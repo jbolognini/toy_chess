@@ -2,6 +2,7 @@ import { Game } from "./game.js";
 import { Renderer } from "./render.js";
 import { Input } from "./input.js";
 import { Engine } from "./engine.js";
+import { loadTheme } from "./theme.js";
 
 const APP_VER = window.APP_VER || 0;
 const APP_TITLE = `Toy Chess v${APP_VER}`;
@@ -17,12 +18,13 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(`./sw.js?v=${APP_VER}`);
 }
 
+const theme = loadTheme();
 const canvas = document.getElementById("board");
 const drawer = document.getElementById("drawer");
 const movesTable = document.getElementById("movesTable");
 
 const game = new Game();
-const renderer = new Renderer(canvas, game, () => game.debugLine());
+const renderer = new Renderer(canvas, game, () => game.debugLine(), theme);
 
 new Input(canvas, game);
 
