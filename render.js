@@ -6,16 +6,16 @@ const ERROR_THEME = {
   text: "#ff2bd6",
   textMuted: "#ff2bd6",
 
-  boardLight: "#ff0000",  // bright red
-  boardDark:  "#00ffff",  // cyan
+  boardLight: "#ff0000", // bright red
+  boardDark: "#00ffff",  // cyan
 
   overlay: {
     lastFrom: "rgba(255,0,255,0.65)",
-    lastTo:   "rgba(0,255,255,0.65)",
+    lastTo: "rgba(0,255,255,0.65)",
     selected: "rgba(255,255,0,0.65)",
-    legal:    "rgba(0,255,0,0.65)",
-    capture:  "rgba(255,0,0,0.65)",
-    check:    "rgba(255,128,0,0.65)",
+    legal: "rgba(0,255,0,0.65)",
+    capture: "rgba(255,0,0,0.65)",
+    check: "rgba(255,128,0,0.65)",
   },
 
   eval: {
@@ -26,7 +26,7 @@ const ERROR_THEME = {
 
   coords: {
     light: "rgba(0,0,0,0.95)",
-    dark:  "rgba(255,255,255,0.95)",
+    dark: "rgba(255,255,255,0.95)",
   },
 
   promo: {
@@ -35,7 +35,7 @@ const ERROR_THEME = {
     tileBlack: "rgba(0,255,255,0.70)",
     strokeWhite: "rgba(255,0,0,0.90)",
     strokeBlack: "rgba(0,255,0,0.90)",
-  }
+  },
 };
 
 function isNonEmptyString(s) {
@@ -78,6 +78,10 @@ export class Renderer {
 
     this.sprites = new Map(); // code -> Image
     this.engine = null;       // set from main: renderer.engine = engine
+    
+    // Asset existence + tinted halo caches
+    this._assetState = new Map();     // assetCode -> "ok" | "bad" | "pending"
+    this._haloTintCache = new Map();  // `${assetCode}|${tintKey}` -> offscreen canvas
 
     // Eval animation state
     this._eval = null;
@@ -85,7 +89,7 @@ export class Renderer {
 
   setTheme(theme) {
     this.theme = mergeThemeStrict(ERROR_THEME, theme);
-    this._themeOk = theme && typeof theme === "object";
+    this._themeOk = this.theme.boardLight !== ERROR_THEME.boardLight;
   }
 
   getSprite(code) {
@@ -96,6 +100,65 @@ export class Renderer {
     return img;
   }
 
+  _hasAsset(assetCode) {
+    const st = this._assetState.get(assetCode);
+    if (st === "ok") return true;
+    if (st === "bad") return false;
+
+    // Probe-load once
+    const img = this.getSprite(assetCode);
+    this._assetState.set(assetCode, "pending");
+
+    if (!img.__assetProbeHooked) {
+      img.__assetProbeHooked = true;
+      img.onload = () => this._assetState.set(assetCode, "ok");
+      img.onerror = () => this._assetState.set(assetCode, "bad");
+    }
+    
+    // While pending, assume it will exist (prevents flicker logic branches)
+    return true;
+  }
+
+  getHaloSpriteFor(code) {
+    // Prefer exact match first, e.g. "bp_halo"
+    const exact = `${code}_halo`;
+    if (this._hasAsset(exact)) return exact;
+
+    // Fallback: only white halos exist, so "bp" -> "wp_halo"
+    const fallback = `w${code[1]}_halo`;
+    if (this._hasAsset(fallback)) return fallback;
+
+    return null;
+  }
+
+  _getTintedHaloCanvas(haloAssetCode, tintKey, tintCss) {
+    const key = `${haloAssetCode}|${tintKey}`;
+    const cached = this._haloTintCache.get(key);
+    if (cached) return cached;
+
+    const img = this.getSprite(haloAssetCode);
+    if (!img || !img.complete || img.naturalWidth === 0) return null;
+
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+
+    const cctx = c.getContext("2d");
+    cctx.clearRect(0, 0, c.width, c.height);
+
+    // Draw alpha mask
+    cctx.drawImage(img, 0, 0);
+
+    // Tint while preserving alpha
+    cctx.globalCompositeOperation = "source-in";
+    cctx.fillStyle = tintCss;
+    cctx.fillRect(0, 0, c.width, c.height);
+    cctx.globalCompositeOperation = "source-over";
+
+    this._haloTintCache.set(key, c);
+    return c;
+  }
+  
   getSelectedCaptureTargets() {
     const sel = this.game.selected;
     if (!sel) return [];
@@ -132,13 +195,12 @@ export class Renderer {
     const EDGE_PAD_MAX_PX = 6;
 
     // Default edge pad target as a fraction of board size (tight by default)
-    // Example: 0.006 * 360px ≈ 2.2px, 0.006 * 520px ≈ 3.1px
     const EDGE_PAD_PCT = 0.006;
 
     // Deterministic rule: eval-to-board gap is half of edge padding
     const GAP_IS_HALF_EDGE = true;
 
-    // Optional: tiny safety pad to prevent kissing HUD/bottom bars (CSS px)
+    // Optional: tiny safety pad (CSS px)
     const BOARD_SAFE_PAD_PX = 0;
 
     // ============================================================
@@ -162,14 +224,14 @@ export class Renderer {
     // First estimate for board size to choose edge padding
     const prelimSize = Math.max(1, Math.min(availW0, availH0) * BOARD_SCALE);
 
-    // Tight edge padding from percentage, then clamp to [0..6] CSS px (converted to device px)
+    // Tight edge padding from percentage, clamp to [min..max] in device px
     const edgePad = clamp(
       prelimSize * EDGE_PAD_PCT,
       px(EDGE_PAD_MIN_PX),
       px(EDGE_PAD_MAX_PX)
     );
 
-    // Gap is deterministic: half of chosen edge padding
+    // Gap: half-edge or full edge
     const evalPad = GAP_IS_HALF_EDGE ? (edgePad * 0.5) : edgePad;
 
     const evalW = px(EVAL_BAR_W_PX);
@@ -179,11 +241,11 @@ export class Renderer {
     const availW = Math.max(1, w - leftInset - safePad * 2);
     const availH = availH0;
 
-    // Final board size (apply BOARD_SCALE exactly once)
+    // Board size
     const size = Math.max(1, Math.min(availW, availH) * BOARD_SCALE);
     const sq = size / 8;
 
-    // Center board in remaining area
+    // Center board
     const ox = leftInset + safePad + (availW - size) / 2;
     const oy = hudH + safePad + (availH - size) / 2;
 
@@ -195,8 +257,7 @@ export class Renderer {
       dpr, w, h,
       hudH,
       size, sq,
-      ox,
-      oy,
+      ox, oy,
       evalRect: { x: evalX, y: evalY, w: evalW, h: evalH }
     };
   }
@@ -204,7 +265,7 @@ export class Renderer {
   draw() {
     const ctx = this.ctx;
     const geom = this.computeGeom();
-    const { dpr, w, h, sq, ox, oy, evalRect } = geom;
+    const { dpr, w, h, sq, ox, oy, evalRect, hudH, size } = geom;
 
     ctx.clearRect(0, 0, w, h);
 
@@ -214,8 +275,8 @@ export class Renderer {
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(this.game.statusText(), 10 * dpr, 18 * dpr);
-  
-    // Theme failure warning (only if CSS vars missing)
+
+    // Theme failure warning
     if (!this._themeOk) {
       ctx.save();
       ctx.fillStyle = "#ff2bd6";
@@ -238,16 +299,19 @@ export class Renderer {
     // --- Eval bar ---
     this.drawEvalBar(ctx, evalRect, dpr);
 
-    // --- Precompute overlays (applied during square loop, under coords/pieces) ---
+    // --- Captured pieces strips (top + bottom, no wrap) ---
+    this.drawCapturedStrips(ctx, { dpr, hudH, ox, oy, size, sq, w, h });
+
+    // --- Precompute overlays (under coords/pieces) ---
     const lm = this.game.lastMove;
     const lmFrom = lm?.from || null;
     const lmTo = lm?.to || null;
 
     const turnColor = this.game.chessView?.turn?.() || "w";
     const inCheck =
-      typeof this.game.chessView?.inCheck === "function" ? this.game.chessView.inCheck() :
-      typeof this.game.chessView?.isCheck === "function" ? this.game.chessView.isCheck() :
-      false;
+      typeof this.game.chessView?.inCheck === "function" ? this.game.chessView.inCheck()
+      : typeof this.game.chessView?.isCheck === "function" ? this.game.chessView.isCheck()
+      : false;
 
     const checkKing = inCheck ? this.findKingSquare(turnColor) : null;
 
@@ -255,7 +319,6 @@ export class Renderer {
     const legal = this.game.legalTargets || [];
     const captureTargets = sel ? this.getSelectedCaptureTargets() : [];
 
-    // Quick lookup sets
     const legalSet = new Set();
     for (const t of legal) legalSet.add(`${t.x},${t.y}`);
 
@@ -272,25 +335,26 @@ export class Renderer {
         const x = ox + c * sq;
         const y = oy + r * sq;
 
-        // Base square
         ctx.fillStyle = isLight ? this.theme.boardLight : this.theme.boardDark;
         ctx.fillRect(x, y, sq, sq);
 
-        // --- Overlays (under coords, above square color) ---
+        // Last move overlays
         if (lmFrom && lmFrom.x === c && lmFrom.y === r) {
-          ctx.fillStyle = this.theme.overlay.lastFrom; // FROM
+          ctx.fillStyle = this.theme.overlay.lastFrom;
           ctx.fillRect(x, y, sq, sq);
         }
         if (lmTo && lmTo.x === c && lmTo.y === r) {
-          ctx.fillStyle = this.theme.overlay.lastTo; // TO
+          ctx.fillStyle = this.theme.overlay.lastTo;
           ctx.fillRect(x, y, sq, sq);
         }
 
+        // Check overlay
         if (checkKing && checkKing.x === c && checkKing.y === r) {
           ctx.fillStyle = this.theme.overlay.check;
           ctx.fillRect(x, y, sq, sq);
         }
 
+        // Selection overlays
         if (sel) {
           if (sel.x === c && sel.y === r) {
             ctx.fillStyle = this.theme.overlay.selected;
@@ -307,7 +371,7 @@ export class Renderer {
           }
         }
 
-        // --- Coords (always on top of overlays) ---
+        // Coords on top
         if (r === 7) {
           const fileChar = flipped ? files[7 - c] : files[c];
           this.drawCoords(ctx, x, y, sq, isLight, fileChar, "bl", dpr);
@@ -334,6 +398,163 @@ export class Renderer {
       this.drawPromotionChooser(ctx, geom);
     }
   }
+
+  // ============================================================
+  // Captured pieces strips
+  // ============================================================
+
+  drawCapturedStrips(ctx, g) {
+    const { dpr, hudH, ox, oy, size, sq, w, h } = g;
+
+    // Tunables
+    const STRIP_MARGIN_PX = 6;      // gap from board
+    const ICON_PCT = 0.42;          // icon size relative to square
+    const ICON_GAP_PX = 3;          // spacing between icons
+    const HALO_SCALE = 1.18;        // halo size relative to icon
+    const TEXT_GAP_PX = 6;          // gap between last icon and +V text
+    const STRIP_PAD_PX = 4;         // left/right padding inside strip rect
+    const FONT_PX = 12;             // material text size (CSS px)
+
+    const px = (cssPx) => cssPx * dpr;
+    const stripMargin = px(STRIP_MARGIN_PX);
+    const icon = Math.floor(sq * ICON_PCT);
+    const iconGap = px(ICON_GAP_PX);
+    const stripPad = px(STRIP_PAD_PX);
+    const textGap = px(TEXT_GAP_PX);
+    const fontPx = px(FONT_PX);
+
+    // Determine which capturer belongs to top/bottom based on flip
+    const topCapturer = (typeof this.game.getTopCapturerColor === "function")
+      ? this.game.getTopCapturerColor()
+      : "w";
+
+    const botCapturer = (typeof this.game.getBottomCapturerColor === "function")
+      ? this.game.getBottomCapturerColor()
+      : "b";
+
+    // Primary grouped lists
+    let topList = (typeof this.game.getCapturedGrouped === "function") ? this.game.getCapturedGrouped(topCapturer) : [];
+    let botList = (typeof this.game.getCapturedGrouped === "function") ? this.game.getCapturedGrouped(botCapturer) : [];
+
+    // Material +V text (only for advantaged side; other returns "")
+    const topPlus = (typeof this.game.getMaterialPlusForColor === "function") ? this.game.getMaterialPlusForColor(topCapturer) : "";
+    const botPlus = (typeof this.game.getMaterialPlusForColor === "function") ? this.game.getMaterialPlusForColor(botCapturer) : "";
+
+    // Strip layout rects: above board and below board (clamped)
+    const stripH = Math.max(icon, Math.floor(fontPx * 1.2));
+    const stripW = size;
+
+    // y positions (we allow overlapping HUD; we only avoid going off-canvas)
+    let topY = Math.floor(oy - stripMargin - stripH);
+    let botY = Math.floor(oy + size + stripMargin);
+
+    topY = Math.max(0, topY);
+    botY = Math.min(h - stripH, botY);
+
+    const topRect = { x: Math.floor(ox), y: topY, w: Math.floor(stripW), h: Math.floor(stripH) };
+    const botRect = { x: Math.floor(ox), y: botY, w: Math.floor(stripW), h: Math.floor(stripH) };
+
+    // Fit check: if either row doesn't fit, fall back to differential mode (no wrapping)
+    const fitsTop = this._capturedRowFits(ctx, topRect, topList, topPlus, { icon, iconGap, stripPad, textGap, fontPx });
+    const fitsBot = this._capturedRowFits(ctx, botRect, botList, botPlus, { icon, iconGap, stripPad, textGap, fontPx });
+
+    if (!(fitsTop && fitsBot) && typeof this.game.getCapturedDifferentialGrouped === "function") {
+      const diff = this.game.getCapturedDifferentialGrouped();
+      // diff.white are pieces showing WHITE's advantage (extra captured by white),
+      // diff.black are pieces showing BLACK's advantage.
+      const topIsWhite = topCapturer === "w";
+      const botIsWhite = botCapturer === "w";
+
+      topList = topIsWhite ? (diff.white || []) : (diff.black || []);
+      botList = botIsWhite ? (diff.white || []) : (diff.black || []);
+    }
+
+    // Draw rows (left-aligned within board width)
+    this._drawCapturedRow(ctx, topRect, topList, topPlus, { icon, iconGap, stripPad, textGap, fontPx, haloScale: HALO_SCALE });
+    this._drawCapturedRow(ctx, botRect, botList, botPlus, { icon, iconGap, stripPad, textGap, fontPx, haloScale: HALO_SCALE });
+  }
+
+  _capturedRowFits(ctx, rect, list, plusText, k) {
+    const { icon, iconGap, stripPad, textGap, fontPx } = k;
+    const n = (list && list.length) ? list.length : 0;
+
+    const iconsW = (n <= 0) ? 0 : (n * icon + (n - 1) * iconGap);
+
+    let textW = 0;
+    if (plusText) {
+      ctx.save();
+      ctx.font = `${Math.floor(fontPx)}px ui-monospace, Menlo, monospace`;
+      textW = Math.ceil(ctx.measureText(plusText).width);
+      ctx.restore();
+    }
+
+    const total = stripPad + iconsW + (plusText ? (textGap + textW) : 0) + stripPad;
+    return total <= rect.w;
+  }
+
+  _drawCapturedRow(ctx, rect, list, plusText, k) {
+    const { icon, iconGap, stripPad, textGap, fontPx, haloScale } = k;
+
+    ctx.save();
+    try {
+      // We keep it minimal: no background pill yet (theme later if desired)
+      // If you want a subtle backdrop, add it here.
+
+      let x = rect.x + stripPad;
+      const cy = rect.y + rect.h / 2;
+
+      // Icons
+      for (const code of (list || [])) {
+        // --- HALO (prefer exact; fallback to white halo; tint if needed) ---
+        const haloAsset = this.getHaloSpriteFor(code);
+        if (haloAsset) {
+          const haloSize = icon * haloScale;
+          const isBlackPiece = code[0] === "b";
+
+          let haloImg = null;
+
+          // If we're using a white halo fallback for a black piece, tint it
+          if (isBlackPiece && haloAsset.startsWith("w")) {
+            // Tunable tint: slightly cool gray
+            const tinted = this._getTintedHaloCanvas(haloAsset, "black", "rgba(210,210,210,1.0)");
+            haloImg = tinted || this.getSprite(haloAsset); // fallback while image loads
+          } else {
+            haloImg = this.getSprite(haloAsset);
+          }
+
+          ctx.drawImage(
+            haloImg,
+            x + (icon - haloSize) / 2,
+            cy - haloSize / 2,
+            haloSize,
+            haloSize
+          );
+        }
+
+        // Piece on top
+        const img = this.getSprite(code);
+        ctx.drawImage(img, x, cy - icon / 2, icon, icon);
+
+        x += icon + iconGap;
+      }
+      
+      // +V text
+      if (plusText) {
+        x += textGap;
+        ctx.fillStyle = this.theme.text;
+        ctx.font = `${Math.floor(fontPx)}px ui-monospace, Menlo, monospace`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(plusText, x, cy);
+      }
+    } finally {
+      ctx.restore();
+    }
+  }
+
+  // ============================================================
+  // Eval bar
+  // ============================================================
 
   drawEvalBar(ctx, r, dpr) {
     if (!this._eval) {
@@ -373,69 +594,59 @@ export class Renderer {
       // Track
       ctx.fillStyle = this.theme.eval.track;
       ctx.fillRect(r.x, r.y, r.w, r.h);
-      
-      // Split position: +1 => white wins => split high, -1 => split low
+
+      // Split position
       const split = r.y + (1 - (this._eval.norm + 1) / 2) * r.h;
-      
-      // White region (top)
+
+      // White (top)
       ctx.fillStyle = this.theme.eval.white;
       ctx.fillRect(r.x, r.y, r.w, Math.max(0, split - r.y));
-      
-      // Black region (bottom)
+
+      // Black (bottom)
       ctx.fillStyle = this.theme.eval.black;
       ctx.fillRect(r.x, split, r.w, Math.max(0, r.y + r.h - split));
-      
-      // Center line — contrast against the *actual* fill at midline
+
+      // Center line — strong near equal, aggressive fade after ~±2
       const midY = r.y + r.h / 2;
       const midIsInBlack = split < midY;
-      
-      // Visibility: strongest near equal, never invisible
-      const n = this._eval.norm; // [-1..+1]
-      // Fade control: stark near equal, aggressive fade after ~±200cp (“±2 eval”)
-      // n is [-1..+1] where 1 ~= CLAMP_CP, so map back to cp using your clamp.
-      const CLAMP_CP = 600;                  // must match your cp->norm clamp
-      const cpAbs = Math.abs(n) * CLAMP_CP;  // 0..CLAMP_CP
-      
-      const FADE_START_CP = 200;  // stay strong up to here
-      const FADE_END_CP   = 400;  // mostly gone by here
-      
-      // 1.0 when <= start, 0.0 when >= end
+
+      const n = this._eval.norm;
+      const cpAbs = Math.abs(n) * CLAMP_CP;
+
+      const FADE_START_CP = 200;
+      const FADE_END_CP = 400;
+
       let t = 1 - (cpAbs - FADE_START_CP) / (FADE_END_CP - FADE_START_CP);
       t = Math.max(0, Math.min(1, t));
-      
-      // Make it drop *hard* after the start (aggressive fade)
-      const nearEqual = t * t;   // square = more aggressive than linear
-      
-      // Alpha: strong when near equal, quickly fades out past ±2
-      const alpha = 0.06 + 0.70 * nearEqual;
-      
-      // Opposite color of the background at midline
+      const nearEqual = t * t;
+
+      const aLine = 0.06 + 0.70 * nearEqual;
+
       ctx.strokeStyle = midIsInBlack
-        ? `rgba(255,255,255,${alpha})`
-        : `rgba(0,0,0,${alpha})`;
-      
-      // Two-pass stroke: soft + crisp
+        ? `rgba(255,255,255,${aLine})`
+        : `rgba(0,0,0,${aLine})`;
+
       ctx.beginPath();
       ctx.lineWidth = Math.max(2, Math.round(2 * dpr));
       ctx.moveTo(r.x, midY);
       ctx.lineTo(r.x + r.w, midY);
       ctx.stroke();
-      
+
       ctx.beginPath();
       ctx.lineWidth = Math.max(1, Math.round(1 * dpr));
       ctx.moveTo(r.x, midY);
       ctx.lineTo(r.x + r.w, midY);
       ctx.stroke();
-      
+
       // Thinking overlay
       if (this._eval.pending) {
-        const t = now / 1000;
-      
-        const pulse = 0.10 + 0.06 * (0.5 + 0.5 * Math.sin(t * 4.0));
+        const t2 = now / 1000;
+
+        const pulse = 0.10 + 0.06 * (0.5 + 0.5 * Math.sin(t2 * 4.0));
         ctx.fillStyle = `rgba(255,255,255,${pulse})`;
         ctx.fillRect(r.x, r.y, r.w, r.h);
-      
-        const scanY = r.y + ((t * 0.35) % 1.0) * r.h;
+
+        const scanY = r.y + ((t2 * 0.35) % 1.0) * r.h;
         ctx.fillStyle = "rgba(255,255,255,0.22)";
         ctx.fillRect(r.x, scanY, r.w, Math.max(1, Math.floor(2 * dpr)));
       }
@@ -443,6 +654,10 @@ export class Renderer {
       ctx.restore();
     }
   }
+
+  // ============================================================
+  // Promotion chooser
+  // ============================================================
 
   drawPromotionChooser(ctx, geom) {
     const { dpr, sq, ox, oy, size } = geom;
@@ -499,6 +714,10 @@ export class Renderer {
       ctx.drawImage(img, x, y, box, box);
     }
   }
+
+  // ============================================================
+  // Coords / helpers
+  // ============================================================
 
   drawCoords(ctx, x, y, sq, isLight, text, corner, dpr) {
     ctx.save();
