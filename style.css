@@ -36,7 +36,6 @@
   --captured-halo-white: rgba(255, 255, 255, 0.95);
   --captured-halo-black: rgba(200, 200, 200, 0.95);
 }
-}
 
 html, body {
   margin: 0;
@@ -138,7 +137,7 @@ button:active { transform: scale(0.98); }
   right: 0;
   bottom: var(--bottombar-h);
   height: var(--drawer-h);
-  var(--drawer-bg);
+  background: var(--drawer-bg);
   border-top: 1px solid #2a2a2a;
   z-index: 25;
   transform: translateY(100%);
