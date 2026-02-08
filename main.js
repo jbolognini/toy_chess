@@ -166,10 +166,6 @@ function renderMovesTable() {
       wEl.classList.add("active");
       activeEl = rowEl; // <-- row, not cell
     }
-    if (r.black && activePly === r.black.ply) {
-      bEl.classList.add("active");
-      activeEl = rowEl; // <-- row, not cell
-    }
 
     if (r.white && game.mode === "review") {
       wEl.addEventListener("click", () => {
@@ -186,9 +182,9 @@ function renderMovesTable() {
 
     if (r.black && activePly === r.black.ply) {
       bEl.classList.add("active");
-      activeEl = bEl;
+      activeEl = rowEl; // <-- row, not cell
     }
-
+    
     if (r.black && game.mode === "review") {
       bEl.addEventListener("click", () => {
         game.gotoReviewPly(r.black.ply);
@@ -207,7 +203,7 @@ function renderMovesTable() {
 
     const scroller = movesTable;
 
-    // Ensure the active cell is fully visible within the movesTable scroller.
+    // Ensure the active row is fully visible within the movesTable scroller.
     const ensureFullyVisible = () => {
       const pad = 12; // px inside the scroller (keeps row from kissing edges)
     
