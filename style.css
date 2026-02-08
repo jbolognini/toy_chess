@@ -35,8 +35,8 @@
   --eval-black: rgba(0,0,0,0.70);
 
   /* Captured material */
-  --captured-halo-white: rgba(255, 255, 255, 0.95);
-  --captured-halo-black: rgba(200, 200, 200, 0.95);
+  --captured-halo-white: rgba(255, 255, 255, 0.40);
+  --captured-halo-black: rgba(185, 185, 185, 0.36);
 }
 
 html, body {
