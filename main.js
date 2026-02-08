@@ -23,6 +23,7 @@ const movesTable = document.getElementById("movesTable");
 
 const game = new Game();
 const renderer = new Renderer(canvas, game, () => game.debugLine());
+renderer.engine = engine;
 new Input(canvas, game);
 
 // Engine disabled in review mode (but we still keep the worker plumbing)

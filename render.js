@@ -145,8 +145,8 @@ export class Renderer {
       ctx.fillText(dbg, 10 * dpr, 38 * dpr);
     }
   
-    // --- Eval placeholder ---
-    this.drawEvalPlaceholder(ctx, evalRect, dpr);
+    // --- Eval bar ---
+    this.drawEvalBar(ctx, evalRect, dpr);
   
     // --- Precompute overlays (applied during square loop, under coords/pieces) ---
     const lm = this.game.lastMove;
@@ -249,20 +249,94 @@ export class Renderer {
     }
   }
 
-  drawEvalPlaceholder(ctx, r, dpr) {
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    ctx.fillRect(r.x, r.y, r.w, r.h);
-
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
-    ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
-    ctx.strokeRect(r.x, r.y, r.w, r.h);
-
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
-    ctx.lineWidth = Math.max(1, Math.floor(1 * dpr));
-    ctx.beginPath();
-    ctx.moveTo(r.x, r.y + r.h / 2);
-    ctx.lineTo(r.x + r.w, r.y + r.h / 2);
-    ctx.stroke();
+  drawEvalBar(ctx, r, dpr) {
+    // Lazily init eval animation state
+    if (!this._eval) {
+      this._eval = {
+        norm: 0.0,        // current displayed [-1..+1]
+        target: 0.0,      // target displayed [-1..+1]
+        pending: false,   // show thinking animation
+        lastT: performance.now()
+      };
+    }
+  
+    // Get latest engine info if available
+    // (Main should set renderer.engine = engine or pass it in; see note below)
+    const engine = this.engine;
+    const cp = engine ? engine.getLatestCp() : 0;
+    const pending = engine ? engine.isPending() : false;
+  
+    // Map cp -> norm
+    const CLAMP_CP = 600; // tune later
+    let target = Math.max(-CLAMP_CP, Math.min(CLAMP_CP, cp)) / CLAMP_CP;
+  
+    // If flipped, anchor advantage to player's side:
+    // flipped=true means black is at bottom; invert the bar so “player side” stays consistent.
+    const flipped = this.game?.flipped === true;
+    if (flipped) target = -target;
+  
+    // Update animation state
+    const now = performance.now();
+    const dt = Math.min(0.050, Math.max(0.001, (now - this._eval.lastT) / 1000));
+    this._eval.lastT = now;
+  
+    this._eval.target = target;
+    this._eval.pending = pending;
+  
+    // Smooth approach (time-based exponential smoothing)
+    const smoothing = 14.0; // higher = snappier
+    const a = 1 - Math.exp(-smoothing * dt);
+    this._eval.norm = this._eval.norm + (this._eval.target - this._eval.norm) * a;
+  
+    // ---- Draw bar ----
+    ctx.save();
+    try {
+      // Background track
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+  
+      // Border
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
+      ctx.strokeRect(r.x, r.y, r.w, r.h);
+  
+      // Center line
+      ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      ctx.lineWidth = Math.max(1, Math.floor(1 * dpr));
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y + r.h / 2);
+      ctx.lineTo(r.x + r.w, r.y + r.h / 2);
+      ctx.stroke();
+  
+      // Split position: +1 => white wins => split high, -1 => split low
+      // We render “white” region above split and “black” region below split.
+      const split = r.y + (1 - (this._eval.norm + 1) / 2) * r.h;
+  
+      // White region (top)
+      ctx.fillStyle = "rgba(255,255,255,0.70)";
+      ctx.fillRect(r.x, r.y, r.w, Math.max(0, split - r.y));
+  
+      // Black region (bottom)
+      ctx.fillStyle = "rgba(0,0,0,0.70)";
+      ctx.fillRect(r.x, split, r.w, Math.max(0, r.y + r.h - split));
+  
+      // Thinking animation overlay
+      if (this._eval.pending) {
+        const t = now / 1000;
+  
+        // Subtle pulse
+        const pulse = 0.10 + 0.06 * (0.5 + 0.5 * Math.sin(t * 4.0));
+        ctx.fillStyle = `rgba(255,255,255,${pulse})`;
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+  
+        // Scan line
+        const scanY = r.y + ((t * 0.35) % 1.0) * r.h;
+        ctx.fillStyle = "rgba(255,255,255,0.22)";
+        ctx.fillRect(r.x, scanY, r.w, Math.max(1, Math.floor(2 * dpr)));
+      }
+    } finally {
+      ctx.restore();
+    }
   }
 
   drawPromotionChooser(ctx, geom) {
