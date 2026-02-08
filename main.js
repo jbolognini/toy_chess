@@ -63,7 +63,7 @@ function setMode(mode) {
     setDrawerOpen(false);
   }
 
-  renderMovesTable();
+  renderMovesTableNow();
 }
 
 
@@ -71,17 +71,16 @@ function setMode(mode) {
 document.getElementById("undoBtn").addEventListener("click", () => {
   if (game.mode === "review") return;
   game.undo();
-  renderMovesTable();
+  renderMovesTableNow();
 });
 document.getElementById("redoBtn").addEventListener("click", () => {
   if (game.mode === "review") return;
   game.redo();
-  renderMovesTable();
+  renderMovesTableNow();
 });
 document.getElementById("resetBtn").addEventListener("click", () => {
   game.reset();
   setMode("play");
-  renderMovesTable();
 });
 
 // --- Drawer controls ---
@@ -91,48 +90,45 @@ document.getElementById("movesBtn").addEventListener("click", () => {
   if (game.mode !== "play") return;
   const open = drawer.classList.contains("drawer-open");
   setDrawerOpen(!open);
-  renderMovesTable();
+  renderMovesTableNow();
 });
 
 document.getElementById("reviewBtn").addEventListener("click", () => {
   if (game.mode !== "play") return;
   game.enterReviewAtEnd();
   setMode("review");
-  renderMovesTable();
 });
 
 // --- Bottom REVIEW controls ---
 document.getElementById("revStartBtn").addEventListener("click", () => {
   if (game.mode !== "review") return;
   game.gotoReviewPly(0);
-  renderMovesTable();
+  renderMovesTableNow();
 });
 document.getElementById("revBackBtn").addEventListener("click", () => {
   if (game.mode !== "review") return;
   game.gotoReviewPly(game.reviewPly - 1);
-  renderMovesTable();
+  renderMovesTableNow();
 });
 document.getElementById("revFwdBtn").addEventListener("click", () => {
   if (game.mode !== "review") return;
   game.gotoReviewPly(game.reviewPly + 1);
-  renderMovesTable();
+  renderMovesTableNow();
 });
 document.getElementById("revEndBtn").addEventListener("click", () => {
   if (game.mode !== "review") return;
   game.enterReviewAtEnd();
-  renderMovesTable();
+  renderMovesTableNow();
 });
 document.getElementById("revCancelBtn").addEventListener("click", () => {
   if (game.mode !== "review") return;
   game.exitReviewCancel();
   setMode("play");
-  renderMovesTable();
 });
 document.getElementById("revPlayHereBtn").addEventListener("click", () => {
   if (game.mode !== "review") return;
   game.playFromHere();
   setMode("play");
-  renderMovesTable();
 });
 
 // --- Move table rendering ---
@@ -237,16 +233,26 @@ function renderMovesTable() {
 
 let lastTableSig = "";
 
+function currentTableSig() {
+  return `${game.mode}|${game.reviewPly}|${game.getUIVersion()}|${game.getPositionVersion()}|${game.getCurrentPly()}`;
+}
+
+// Call this instead of renderMovesTable() anywhere you do it manually.
+// It prevents maybeUpdateMovesTable() from immediately re-rendering and undoing scroll.
+function renderMovesTableNow() {
+  lastTableSig = currentTableSig();
+  renderMovesTable();
+}
+
 function maybeUpdateMovesTable() {
   const drawerOpen = drawer.classList.contains("drawer-open");
   const shouldShow = drawerOpen || game.mode === "review";
   if (!shouldShow) return;
 
-  const sig = `${game.mode}|${game.reviewPly}|${game.getUIVersion()}|${game.getPositionVersion()}|${game.getCurrentPly()}`;
+  const sig = currentTableSig();
   if (sig === lastTableSig) return;
 
-  lastTableSig = sig;
-  renderMovesTable();
+  renderMovesTableNow();
 }
 
 // --- Canvas sizing ---
@@ -267,7 +273,7 @@ resizeCanvasToCSSSize();
 
 // Init
 setMode("play");
-renderMovesTable();
+renderMovesTableNow();
 
 // Main loop
 function loop() {
