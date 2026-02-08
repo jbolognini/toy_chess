@@ -196,16 +196,36 @@ function renderMovesTable() {
     movesTable.appendChild(rowEl);
   }
 
-  // Auto-scroll: keep the active ply visible
+  // Auto-scroll: keep the active ply fully visible (iOS-safe).
   // Only do this when the active ply changes (prevents fighting the user's scroll).
   if (activeEl && activePly !== lastAutoScrollPly) {
     lastAutoScrollPly = activePly;
 
-    // Use "nearest" so it doesn't jump too aggressively.
-    activeEl.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
-      behavior: "auto"
+    const scroller = movesTable;
+
+    // Ensure the active cell is fully visible within the movesTable scroller.
+    const ensureFullyVisible = () => {
+      const pad = 12; // px inside the scroller (keeps row from kissing edges)
+
+      const top = activeEl.offsetTop;
+      const bottom = top + activeEl.offsetHeight;
+
+      const viewTop = scroller.scrollTop;
+      const viewBottom = viewTop + scroller.clientHeight;
+
+      if (bottom + pad > viewBottom) {
+        scroller.scrollTop = (bottom + pad) - scroller.clientHeight;
+      } else if (top - pad < viewTop) {
+        scroller.scrollTop = Math.max(0, top - pad);
+      }
+    };
+
+    // iOS/transform drawers: layout settles after paint. Do it twice.
+    requestAnimationFrame(() => {
+      ensureFullyVisible();
+      requestAnimationFrame(() => {
+        ensureFullyVisible();
+      });
     });
   }
 }
