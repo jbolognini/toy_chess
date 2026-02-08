@@ -33,100 +33,91 @@ export class Renderer {
   }
 
   computeGeom() {
-    //
+    // ============================================================
     // Knobs (tune here)
-    //
+    // ============================================================
     const DPR_FLOOR = 1;
   
-    // HUD height (device-px). Keep pixel-based so text/buttons feel stable.
+    // HUD height (CSS px)
     const HUD_H_PX = 46;
   
-    // Board scale within available area (1.0 = max fit)
-    const BOARD_SCALE = 0.97;
+    // Board scale inside the usable area (1.0 = maximum fit)
+    const BOARD_SCALE = 0.985;
   
-    // Eval bar sizing (device-px)
-    const EVAL_BAR_W_PX = 16;
+    // Eval bar thickness (CSS px)
+    const EVAL_BAR_W_PX = 14;
   
-    // Eval spacing as a fraction of board size (clamped)
-    const EVAL_OUTER_MARGIN_PCT = 0.012; // space from screen edge
-    const EVAL_PAD_PCT = 0.018;          // gap between eval bar and board
-    const EVAL_SPACING_MIN_PX = 4;       // min clamp (CSS px, pre-dpr)
-    const EVAL_SPACING_MAX_PX = 14;      // max clamp (CSS px, pre-dpr)
+    // Edge padding: screen edge -> eval bar (CSS px), clamped
+    const EDGE_PAD_MIN_PX = 0;
+    const EDGE_PAD_MAX_PX = 6;
   
-    // Safety inset so board never touches edges (fraction of board size)
-    const BOARD_SAFE_PAD_PCT = 0.010;
-    const BOARD_SAFE_PAD_MIN_PX = 2;
-    const BOARD_SAFE_PAD_MAX_PX = 10;
+    // Default edge pad target as a fraction of board size (tight by default)
+    // Example: 0.006 * 360px ≈ 2.2px, 0.006 * 520px ≈ 3.1px
+    const EDGE_PAD_PCT = 0.006;
   
-    //
+    // Deterministic rule: eval-to-board gap is half of edge padding
+    const GAP_IS_HALF_EDGE = true;
+  
+    // Optional: tiny safety pad to prevent kissing HUD/bottom bars (CSS px)
+    const BOARD_SAFE_PAD_PX = 0;
+  
+    // ============================================================
     // Helpers
-    //
+    // ============================================================
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   
     const dpr = Math.max(DPR_FLOOR, window.devicePixelRatio || 1);
     const w = this.canvas.width;
     const h = this.canvas.height;
   
-    // Convert "css px" clamps to device px
     const px = (cssPx) => cssPx * dpr;
   
-    const hudH = HUD_H_PX * dpr;
+    const hudH = px(HUD_H_PX);
+    const safePad = px(BOARD_SAFE_PAD_PX);
   
-    // Available space below HUD
-    const baseAvailW = Math.max(1, w);
-    const baseAvailH = Math.max(1, h - hudH);
+    // Available height below HUD
+    const availH0 = Math.max(1, h - hudH - safePad * 2);
+    const availW0 = Math.max(1, w - safePad * 2);
   
-    // First-pass board size ignoring eval gutter; lets us compute % spacing from board size.
-    const prelimSize = Math.max(1, Math.min(baseAvailW, baseAvailH) * BOARD_SCALE);
+    // We need a first estimate for board size to choose edge padding.
+    // Use the limiting dimension, but DO NOT apply BOARD_SCALE twice.
+    const prelimSize = Math.max(1, Math.min(availW0, availH0) * BOARD_SCALE);
   
-    // Spacing derived from board size (then clamped)
-    const evalOuterMargin = clamp(
-      prelimSize * EVAL_OUTER_MARGIN_PCT,
-      px(EVAL_SPACING_MIN_PX),
-      px(EVAL_SPACING_MAX_PX)
+    // Choose tight edge padding from percentage, then clamp to [0..6] CSS px
+    const edgePad = clamp(
+      prelimSize * EDGE_PAD_PCT,
+      px(EDGE_PAD_MIN_PX),
+      px(EDGE_PAD_MAX_PX)
     );
   
-    const evalPad = clamp(
-      prelimSize * EVAL_PAD_PCT,
-      px(EVAL_SPACING_MIN_PX),
-      px(EVAL_SPACING_MAX_PX)
-    );
+    // Gap is deterministic: half of chosen edge padding
+    const evalPad = GAP_IS_HALF_EDGE ? (edgePad * 0.5) : edgePad;
   
-    const evalW = EVAL_BAR_W_PX * dpr;
+    const evalW = px(EVAL_BAR_W_PX);
+    const leftInset = edgePad + evalW + evalPad;
   
-    // Optional safe padding so board never kisses edges (esp. when BOARD_SCALE is high)
-    const boardSafePad = clamp(
-      prelimSize * BOARD_SAFE_PAD_PCT,
-      px(BOARD_SAFE_PAD_MIN_PX),
-      px(BOARD_SAFE_PAD_MAX_PX)
-    );
+    // Final available width for board after reserving eval gutter
+    const availW = Math.max(1, w - leftInset - safePad * 2);
+    const availH = availH0;
   
-    // Left inset consumed by eval gutter
-    const leftInset = evalOuterMargin + evalW + evalPad;
-  
-    // Final available area for board
-    const availW = Math.max(1, w - leftInset - boardSafePad * 2);
-    const availH = Math.max(1, h - hudH - boardSafePad * 2);
-  
-    // Final board sizing
+    // Final board size (apply BOARD_SCALE exactly once)
     const size = Math.max(1, Math.min(availW, availH) * BOARD_SCALE);
     const sq = size / 8;
   
-    // Center board in remaining area (respect safe padding)
-    const boardX0 = leftInset + boardSafePad + (availW - size) / 2;
-    const boardY0 = hudH + boardSafePad + (availH - size) / 2;
+    // Center board in remaining area
+    const ox = leftInset + safePad + (availW - size) / 2;
+    const oy = hudH + safePad + (availH - size) / 2;
   
-    // Eval bar aligned to board vertically
-    const evalX = evalOuterMargin;
-    const evalY = boardY0;
+    const evalX = edgePad;
+    const evalY = oy;
     const evalH = size;
   
     return {
       dpr, w, h,
       hudH,
       size, sq,
-      ox: boardX0,
-      oy: boardY0,
+      ox,
+      oy,
       evalRect: { x: evalX, y: evalY, w: evalW, h: evalH }
     };
   }
