@@ -164,7 +164,11 @@ function renderMovesTable() {
 
     if (r.white && activePly === r.white.ply) {
       wEl.classList.add("active");
-      activeEl = wEl;
+      activeEl = rowEl; // <-- row, not cell
+    }
+    if (r.black && activePly === r.black.ply) {
+      bEl.classList.add("active");
+      activeEl = rowEl; // <-- row, not cell
     }
 
     if (r.white && game.mode === "review") {
@@ -206,13 +210,17 @@ function renderMovesTable() {
     // Ensure the active cell is fully visible within the movesTable scroller.
     const ensureFullyVisible = () => {
       const pad = 12; // px inside the scroller (keeps row from kissing edges)
-
-      const top = activeEl.offsetTop;
-      const bottom = top + activeEl.offsetHeight;
-
+    
+      // Measure in the same coordinate system (viewport), then convert to scrollTop space.
+      const scRect = scroller.getBoundingClientRect();
+      const elRect = activeEl.getBoundingClientRect();
+    
+      const top = (elRect.top - scRect.top) + scroller.scrollTop;
+      const bottom = top + elRect.height;
+    
       const viewTop = scroller.scrollTop;
       const viewBottom = viewTop + scroller.clientHeight;
-
+    
       if (bottom + pad > viewBottom) {
         scroller.scrollTop = (bottom + pad) - scroller.clientHeight;
       } else if (top - pad < viewTop) {
