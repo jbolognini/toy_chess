@@ -137,14 +137,13 @@ let lastAutoScrollKey = "";
 function renderMovesTable() {
   const rows = game.getMoveRows();
   const activePly = (game.mode === "review") ? game.reviewPly : game.getCurrentPly();
-  activeIsPly0 = (activePly === 0);
 
   // Rebuild table
   movesTable.innerHTML = "";
 
   let activeEl = null;
-  let activeIsPly0 = false;
-
+  const activeIsPly0 = (activePly === 0);
+  
   for (const r of rows) {
     const rowEl = document.createElement("div");
     rowEl.className = "moveRow";
@@ -198,6 +197,8 @@ function renderMovesTable() {
   // Only do this when (mode, ply) changes (prevents fighting the user's scroll).
   const autoKey = `${game.mode}|${activePly}`;
   if ((activeEl || activeIsPly0) && autoKey !== lastAutoScrollKey) {
+    
+    lastAutoScrollKey = autoKey;
 
     const scroller = movesTable;
     
