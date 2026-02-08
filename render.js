@@ -36,6 +36,13 @@ const ERROR_THEME = {
     strokeWhite: "rgba(255,0,0,0.90)",
     strokeBlack: "rgba(0,255,0,0.90)",
   },
+
+  captured: {
+    haloTintWhite: "rgba(255, 0, 255, 1.0)", // loud = missing
+    haloTintWhiteKey: "white",
+    haloTintBlack: "rgba(255, 0, 255, 1.0)", // loud = missing
+    haloTintBlackKey: "black",
+  }
 };
 
 function isNonEmptyString(s) {
@@ -494,34 +501,46 @@ export class Renderer {
 
   _drawCapturedRow(ctx, rect, list, plusText, k) {
     const { icon, iconGap, stripPad, textGap, fontPx, haloScale } = k;
-
+  
     ctx.save();
     try {
-      // We keep it minimal: no background pill yet (theme later if desired)
-      // If you want a subtle backdrop, add it here.
-
       let x = rect.x + stripPad;
       const cy = rect.y + rect.h / 2;
-
+  
       // Icons
       for (const code of (list || [])) {
-        // --- HALO (prefer exact; fallback to white halo; tint if needed) ---
         const haloAsset = this.getHaloSpriteFor(code);
         if (haloAsset) {
           const haloSize = icon * haloScale;
           const isBlackPiece = code[0] === "b";
-
+  
           let haloImg = null;
-
-          // If we're using a white halo fallback for a black piece, tint it
-          if (isBlackPiece && haloAsset.startsWith("w")) {
-            // Tunable tint: slightly cool gray
-            const tinted = this._getTintedHaloCanvas(haloAsset, "black", "rgba(210,210,210,1.0)");
-            haloImg = tinted || this.getSprite(haloAsset); // fallback while image loads
+  
+          if (haloAsset.startsWith("w")) {
+            // White halo asset — tint based on piece color
+            if (isBlackPiece) {
+              haloImg = this._getTintedHaloCanvas(
+                haloAsset,
+                this.theme.captured.haloTintBlackKey,
+                this.theme.captured.haloTintBlack
+              );
+            } else {
+              haloImg = this._getTintedHaloCanvas(
+                haloAsset,
+                this.theme.captured.haloTintWhiteKey,
+                this.theme.captured.haloTintWhite
+              );
+            }
           } else {
+            // Exact halo asset (bp_halo, etc)
             haloImg = this.getSprite(haloAsset);
           }
-
+  
+          // Safety: image may still be loading
+          if (!haloImg) {
+            haloImg = this.getSprite(haloAsset);
+          }
+  
           ctx.drawImage(
             haloImg,
             x + (icon - haloSize) / 2,
@@ -530,14 +549,14 @@ export class Renderer {
             haloSize
           );
         }
-
+  
         // Piece on top
         const img = this.getSprite(code);
         ctx.drawImage(img, x, cy - icon / 2, icon, icon);
-
+  
         x += icon + iconGap;
       }
-      
+  
       // +V text
       if (plusText) {
         x += textGap;

@@ -10,6 +10,9 @@ const TOKENS = [
   "ov-last-from", "ov-last-to", "ov-selected", "ov-legal", "ov-capture", "ov-check",
   // Eval
   "eval-track", "eval-white", "eval-black",
+  // Captured halos
+  "captured-halo-white",
+  "captured-halo-black",
 ];
 
 function readCssVar(name) {
@@ -25,13 +28,13 @@ export function loadTheme() {
     appBg: raw["app-bg"],
     barBg: raw["bar-bg"],
     drawerBg: raw["drawer-bg"],
-
+  
     text: raw["text"],
     textMuted: raw["text-muted"],
-
+  
     boardLight: raw["board-light"],
     boardDark: raw["board-dark"],
-
+  
     overlay: {
       lastFrom: raw["ov-last-from"],
       lastTo: raw["ov-last-to"],
@@ -40,11 +43,18 @@ export function loadTheme() {
       capture: raw["ov-capture"],
       check: raw["ov-check"],
     },
-
+  
     eval: {
       track: raw["eval-track"],
       white: raw["eval-white"],
       black: raw["eval-black"],
+    },
+  
+    captured: {
+      haloTintWhite: raw["captured-halo-white"],
+      haloTintWhiteKey: "white",
+      haloTintBlack: raw["captured-halo-black"],
+      haloTintBlackKey: "black",
     },
   };
 }
