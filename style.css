@@ -162,6 +162,12 @@ button:active { transform: scale(0.98); }
   flex: 1 1 auto;
 }
 
+#movesTable::after {
+  content: "";
+  display: block;
+  height: 56px;
+}
+
 /* Move table row: 3 columns (num / white / black) */
 .moveRow {
   display: grid;
