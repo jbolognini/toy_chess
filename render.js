@@ -16,6 +16,22 @@ export class Renderer {
     return img;
   }
 
+  getSelectedCaptureTargets() {
+    const sel = this.game.selected;
+    if (!sel) return [];
+  
+    const out = [];
+    const mover = this.game.pieceCodeAt(sel.x, sel.y);
+    if (!mover) return out;
+  
+    const moverColor = mover[0]; // "w" or "b"
+    for (const t of this.game.legalTargets) {
+      const victim = this.game.pieceCodeAt(t.x, t.y);
+      if (victim && victim[0] !== moverColor) out.push(t);
+    }
+    return out;
+  }
+
   computeGeom() {
     const dpr = window.devicePixelRatio || 1;
     const w = this.canvas.width;
@@ -56,15 +72,16 @@ export class Renderer {
     const ctx = this.ctx;
     const geom = this.computeGeom();
     const { dpr, w, h, sq, ox, oy, evalRect } = geom;
-
+  
     ctx.clearRect(0, 0, w, h);
-
-    // Status
+  
+    // --- HUD ---
     ctx.fillStyle = "#ddd";
     ctx.font = `${Math.floor(14 * dpr)}px ui-monospace, Menlo, monospace`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
     ctx.fillText(this.game.statusText(), 10 * dpr, 18 * dpr);
-
-    // Debug (optional)
+  
     const dbg = this.getDebug?.();
     if (dbg) {
       ctx.fillStyle = "#888";
@@ -73,47 +90,96 @@ export class Renderer {
       ctx.textBaseline = "alphabetic";
       ctx.fillText(dbg, 10 * dpr, 38 * dpr);
     }
-    
-    // Eval placeholder
+  
+    // --- Eval placeholder ---
     this.drawEvalPlaceholder(ctx, evalRect, dpr);
-
-    // Board
+  
+    // --- Precompute overlays (applied during square loop, under coords/pieces) ---
+    const lm = this.game.lastMove;
+    const lmFrom = lm?.from || null;
+    const lmTo = lm?.to || null;
+  
+    const turnColor = this.game.chessView?.turn?.() || "w";
+    const inCheck =
+      typeof this.game.chessView?.inCheck === "function" ? this.game.chessView.inCheck() :
+      typeof this.game.chessView?.isCheck === "function" ? this.game.chessView.isCheck() :
+      false;
+  
+    const checkKing = inCheck ? this.findKingSquare(turnColor) : null;
+  
+    const sel = this.game.selected || null;
+    const legal = this.game.legalTargets || [];
+    const captureTargets = sel ? this.getSelectedCaptureTargets() : [];
+  
+    // Build quick lookup sets for target overlays (avoid O(64*N) scans)
+    const legalSet = new Set();
+    for (const t of legal) legalSet.add(`${t.x},${t.y}`);
+  
+    const capSet = new Set();
+    for (const t of captureTargets) capSet.add(`${t.x},${t.y}`);
+  
+    // --- Board ---
     const files = "abcdefgh";
     const flipped = this.game.flipped === true; // future flip button can set game.flipped
-    
+  
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const isLight = (r + c) % 2 === 0;
-        ctx.fillStyle = isLight ? "#ddd" : "#666";
         const x = ox + c * sq;
         const y = oy + r * sq;
+  
+        // Base square
+        ctx.fillStyle = isLight ? "#ddd" : "#666";
         ctx.fillRect(x, y, sq, sq);
-    
-        // File letters along bottom rank (screen bottom row)
+  
+        // --- Overlays (under coords, above square color) ---
+  
+        // Last move: from/to
+        if (lmFrom && lmFrom.x === c && lmFrom.y === r) {
+          ctx.fillStyle = "rgba(255, 215, 0, 0.28)"; // FROM
+          ctx.fillRect(x, y, sq, sq);
+        }
+        if (lmTo && lmTo.x === c && lmTo.y === r) {
+          ctx.fillStyle = "rgba(255, 235, 90, 0.40)"; // TO
+          ctx.fillRect(x, y, sq, sq);
+        }
+  
+        // King in check (side to move in view)
+        if (checkKing && checkKing.x === c && checkKing.y === r) {
+          ctx.fillStyle = "rgba(255, 0, 0, 0.22)";
+          ctx.fillRect(x, y, sq, sq);
+        }
+  
+        // Selection + targets (play only)
+        if (sel) {
+          if (sel.x === c && sel.y === r) {
+            ctx.fillStyle = "rgba(255,255,0,0.22)";
+            ctx.fillRect(x, y, sq, sq);
+          } else {
+            const key = `${c},${r}`;
+            if (capSet.has(key)) {
+              ctx.fillStyle = "rgba(255,0,0,0.18)"; // capture threats
+              ctx.fillRect(x, y, sq, sq);
+            } else if (legalSet.has(key)) {
+              ctx.fillStyle = "rgba(0,255,0,0.16)"; // quiet/legal targets
+              ctx.fillRect(x, y, sq, sq);
+            }
+          }
+        }
+  
+        // --- Coords (always on top of overlays) ---
         if (r === 7) {
           const fileChar = flipped ? files[7 - c] : files[c];
           this.drawCoords(ctx, x, y, sq, isLight, fileChar, "bl", dpr);
         }
-    
-        // Rank numbers along rightmost file (screen right column)
         if (c === 7) {
           const rankNum = flipped ? String(r + 1) : String(8 - r);
           this.drawCoords(ctx, x, y, sq, isLight, rankNum, "tr", dpr);
         }
       }
     }
-
-    // Selection highlights (only meaningful in play)
-    if (this.game.selected) {
-      ctx.fillStyle = "rgba(255,255,0,0.25)";
-      ctx.fillRect(ox + this.game.selected.x * sq, oy + this.game.selected.y * sq, sq, sq);
-    }
-    for (const t of this.game.legalTargets) {
-      ctx.fillStyle = "rgba(0,255,0,0.20)";
-      ctx.fillRect(ox + t.x * sq, oy + t.y * sq, sq, sq);
-    }
-
-    // Pieces (from view)
+  
+    // --- Pieces (from view) ---
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
         const code = this.game.pieceCodeAt(x, y);
@@ -122,8 +188,8 @@ export class Renderer {
         ctx.drawImage(img, ox + x * sq, oy + y * sq, sq, sq);
       }
     }
-
-    // Promotion chooser (only in play mode)
+  
+    // --- Promotion chooser (only in play mode) ---
     if (this.game.pendingPromotion) {
       this.drawPromotionChooser(ctx, geom);
     }
@@ -239,4 +305,22 @@ export class Renderer {
       ctx.restore();
     }
   }
+
+  drawSquareOverlay(ctx, ox, oy, sq, x, y, fillStyle) {
+    ctx.fillStyle = fillStyle;
+    ctx.fillRect(ox + x * sq, oy + y * sq, sq, sq);
+  }
+  
+  findKingSquare(color) {
+    // color: "w" or "b"
+    // Uses your existing pieceCodeAt(x,y) which returns like "wk", "bk", etc.
+    const target = color === "w" ? "wk" : "bk";
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        if (this.game.pieceCodeAt(x, y) === target) return { x, y };
+      }
+    }
+    return null;
+  }
+
 }

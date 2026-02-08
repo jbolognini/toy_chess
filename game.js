@@ -13,6 +13,7 @@ export class Game {
     // UI state (play mode only)
     this.selected = null;
     this.legalTargets = [];
+    this.lastMove = null; // { from:{x,y}, to:{x,y} } or null
 
     // Promotion state (play mode only)
     this.pendingPromotion = null; // {from,to,color}
@@ -72,6 +73,24 @@ export class Game {
     const fen = this.snapshots[p].fen;
     this.chessView.load(fen);
     this._uiVersion++;
+    this.updateDerivedAfterViewChange();
+  }
+
+  updateDerivedAfterViewChange() {
+    // Determine displayed ply
+    const ply = (this.mode === "review") ? this.reviewPly : this.history.length;
+  
+    // lastMove should be the move that led to this ply
+    if (ply <= 0) {
+      this.lastMove = null;
+    } else {
+      // You need move-by-ply access. Use whatever you already store.
+      // Preferred: store UCI per ply, or {from,to,promo} per ply.
+      const m = this.moveAtPly(ply - 1); // <- implement / adapt
+      this.lastMove = m ? { from: { x: m.fromX, y: m.fromY }, to: { x: m.toX, y: m.toY } } : null;
+    }
+  
+    // Any other derived UI state can be refreshed here later
   }
 
   // ----- status / pieces read from VIEW -----
@@ -250,7 +269,7 @@ export class Game {
 
     const move = this.chessLive.move({ from, to });
     if (!move) return false;
-
+    
     this.history.push(move);
     this.redoStack = [];
     this._pushSnapshot(move);
@@ -262,8 +281,28 @@ export class Game {
     this.selected = null;
     this.legalTargets = [];
     this._uiVersion++;
+    
+    this.updateDerivedAfterViewChange()
 
     return true;
+  }
+
+  moveAtPly(plyIndex) {
+    if (plyIndex < 0 || plyIndex >= this.history.length) return null;
+
+    const m = this.history[plyIndex];
+    if (!m || !m.from || !m.to) return null;
+
+    const f = this.xyFromSquare(m.from);
+    const t = this.xyFromSquare(m.to);
+
+    return {
+      fromX: f.x,
+      fromY: f.y,
+      toX: t.x,
+      toY: t.y,
+      promotion: m.promotion || null
+    };
   }
 
   // ----- undo/redo/reset (PLAY ONLY) -----
@@ -287,6 +326,8 @@ export class Game {
     this._posVersion++;
     this._uiVersion++;
 
+    this.updateDerivedAfterViewChange();
+    
     return true;
   }
 
@@ -312,7 +353,9 @@ export class Game {
     this._syncViewToLive();
     this._posVersion++;
     this._uiVersion++;
-
+    
+    this.updateDerivedAfterViewChange();
+    
     return true;
   }
 
@@ -323,6 +366,7 @@ export class Game {
     this.selected = null;
     this.legalTargets = [];
     this.pendingPromotion = null;
+    this.lastMove = null;
 
     this.history = [];
     this.redoStack = [];
@@ -332,6 +376,7 @@ export class Game {
 
     this._posVersion++;
     this._uiVersion++;
+    this.updateDerivedAfterViewChange();
   }
 
   // ----- review mode API -----
@@ -342,6 +387,7 @@ export class Game {
 
     this.mode = "review";
     this._loadViewPly(this.history.length);
+    this.updateDerivedAfterViewChange();
   }
 
   gotoReviewPly(ply) {
@@ -356,6 +402,7 @@ export class Game {
     this.legalTargets = [];
     this.pendingPromotion = null;
     this._uiVersion++;
+    this.updateDerivedAfterViewChange();
   }
 
   playFromHere() {
@@ -398,7 +445,9 @@ export class Game {
     this._syncViewToLive();
     this._posVersion++;
     this._uiVersion++;
-
+    
+    this.updateDerivedAfterViewChange();
+    
     return true;
   }
 
