@@ -295,13 +295,28 @@ export class Renderer {
       ctx.fillStyle = "rgba(255,255,255,0.08)";
       ctx.fillRect(r.x, r.y, r.w, r.h);
   
-      // Border
+      // Border - None
+      /*
       ctx.strokeStyle = "rgba(255,255,255,0.25)";
       ctx.lineWidth = Math.max(1, Math.floor(2 * dpr));
       ctx.strokeRect(r.x, r.y, r.w, r.h);
+      */
   
-      // Center line
-      ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      // Center line (most visible near equal)
+      const n = this._eval.norm; // [-1..+1], smoothed
+      
+      // Visibility: 1 at equal, goes to 0 as advantage grows
+      const nearEqual = 1 - Math.min(1, Math.abs(n) * 1.4);
+      
+      // Base alpha when equal, clamp so it doesn't disappear instantly
+      const a = 0.08 + 0.30 * nearEqual;
+      
+      // Choose line color to contrast with dominant side at center
+      const lineColor = (n >= 0)
+        ? `rgba(0,0,0,${a})`         // White ahead -> dark line
+        : `rgba(255,255,255,${a})`;  // Black ahead -> light line
+      
+      ctx.strokeStyle = lineColor;
       ctx.lineWidth = Math.max(1, Math.floor(1 * dpr));
       ctx.beginPath();
       ctx.moveTo(r.x, r.y + r.h / 2);

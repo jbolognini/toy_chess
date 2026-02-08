@@ -2,40 +2,76 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
     <link rel="manifest" href="./manifest.json" />
     <link rel="stylesheet" href="./style.css" />
     <title>Toy Chess</title>
 
     <script>
-      // bump this when Safari is stubborn
-      window.APP_VER = 37;
+      // Bump this when Safari is stubborn
+      window.APP_VER = 38;
     </script>
 
     <script type="module">
       const v = window.APP_VER || 0;
-    
+
+      function ensureFatalPre() {
+        let pre = document.getElementById("fatalError");
+        if (!pre) {
+          pre = document.createElement("pre");
+          pre.id = "fatalError";
+          document.body.appendChild(pre);
+        }
+        return pre;
+      }
+
+      function setTitleError(tag) {
+        document.title = `Toy Chess v${v} (${tag})`;
+        const titleEl = document.getElementById("titleText");
+        if (titleEl) titleEl.textContent = `Toy Chess v${v} (${tag})`;
+      }
+
+      function showFatal(tag, msg) {
+        const run = () => {
+          setTitleError(tag);
+          const pre = ensureFatalPre();
+          pre.textContent = msg;
+        };
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", run, { once: true });
+        } else {
+          run();
+        }
+      }
+
+      // Catch runtime script errors (including order-of-init bugs)
+      window.addEventListener("error", (ev) => {
+        const msg =
+          ev?.error?.stack ||
+          ev?.error?.message ||
+          `${ev?.message || "Script error"}\n@ ${ev?.filename || "?"}:${
+            ev?.lineno || "?"
+          }:${ev?.colno || "?"}`;
+        showFatal("RUNTIME ERROR", msg);
+      });
+
+      // Catch unhandled promise rejections
+      window.addEventListener("unhandledrejection", (ev) => {
+        const r = ev?.reason;
+        const msg = r?.stack || r?.message || String(r || "Unhandled rejection");
+        showFatal("UNHANDLED REJECTION", msg);
+      });
+
+      // Load the app
       try {
         await import(`./main.js?v=${v}`);
       } catch (e) {
         const msg = String(e?.stack || e?.message || e);
-        document.title = `Toy Chess v${v} (LOAD ERROR)`;
-    
-        const show = () => {
-          let pre = document.getElementById("fatalError");
-          if (!pre) {
-            pre = document.createElement("pre");
-            pre.id = "fatalError";
-            document.body.appendChild(pre);
-          }
-          pre.textContent = msg;
-        };
-    
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", show, { once: true });
-        } else {
-          show();
-        }
+        showFatal("LOAD ERROR", msg);
       }
     </script>
   </head>
