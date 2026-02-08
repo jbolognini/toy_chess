@@ -410,7 +410,7 @@ export class Renderer {
     const STRIP_MARGIN_PX = 6;      // gap from board
     const ICON_PCT = 0.42;          // icon size relative to square
     const ICON_GAP_PX = 3;          // spacing between icons
-    const HALO_SCALE = 1.18;        // halo size relative to icon
+    const HALO_SCALE = 1.05;        // halo size relative to icon
     const TEXT_GAP_PX = 6;          // gap between last icon and +V text
     const STRIP_PAD_PX = 4;         // left/right padding inside strip rect
     const FONT_PX = 12;             // material text size (CSS px)
