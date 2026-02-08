@@ -137,11 +137,13 @@ let lastAutoScrollKey = "";
 function renderMovesTable() {
   const rows = game.getMoveRows();
   const activePly = (game.mode === "review") ? game.reviewPly : game.getCurrentPly();
+  activeIsPly0 = (activePly === 0);
 
   // Rebuild table
   movesTable.innerHTML = "";
 
   let activeEl = null;
+  let activeIsPly0 = false;
 
   for (const r of rows) {
     const rowEl = document.createElement("div");
@@ -195,10 +197,20 @@ function renderMovesTable() {
   // Auto-scroll: keep the active ply fully visible (iOS-safe).
   // Only do this when (mode, ply) changes (prevents fighting the user's scroll).
   const autoKey = `${game.mode}|${activePly}`;
-  if (activeEl && autoKey !== lastAutoScrollKey) {
-    lastAutoScrollKey = autoKey;
+  if ((activeEl || activeIsPly0) && autoKey !== lastAutoScrollKey) {
 
     const scroller = movesTable;
+    
+    // Special-case ply 0 (start position): there is no move row, so scroll to top.
+    if (activeIsPly0) {
+      requestAnimationFrame(() => {
+        scroller.scrollTop = 0;
+        requestAnimationFrame(() => {
+          scroller.scrollTop = 0;
+        });
+      });
+      return;
+    }
     
     // Ensure the active row is fully visible within the movesTable scroller.
     const ensureFullyVisible = () => {
