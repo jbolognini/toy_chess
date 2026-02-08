@@ -136,7 +136,7 @@ document.getElementById("revPlayHereBtn").addEventListener("click", () => {
 });
 
 // --- Move table rendering ---
-let lastAutoScrollPly = null;
+let lastAutoScrollKey = "";
 
 function renderMovesTable() {
   const rows = game.getMoveRows();
@@ -197,12 +197,13 @@ function renderMovesTable() {
   }
 
   // Auto-scroll: keep the active ply fully visible (iOS-safe).
-  // Only do this when the active ply changes (prevents fighting the user's scroll).
-  if (activeEl && activePly !== lastAutoScrollPly) {
-    lastAutoScrollPly = activePly;
+  // Only do this when (mode, ply) changes (prevents fighting the user's scroll).
+  const autoKey = `${game.mode}|${activePly}`;
+  if (activeEl && autoKey !== lastAutoScrollKey) {
+    lastAutoScrollKey = autoKey;
 
     const scroller = movesTable;
-
+    
     // Ensure the active row is fully visible within the movesTable scroller.
     const ensureFullyVisible = () => {
       const pad = 12; // px inside the scroller (keeps row from kissing edges)
