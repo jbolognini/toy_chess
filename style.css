@@ -154,7 +154,11 @@ button:active { transform: scale(0.98); }
 
 #movesTable {
   overflow: auto;
-  padding: 4px 6px 8px 6px; /* small padding only */
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+
+  padding: 4px 6px calc(24px + env(safe-area-inset-bottom)) 6px;
+  box-sizing: border-box;
+
   flex: 1 1 auto;
 }
 
