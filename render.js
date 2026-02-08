@@ -33,31 +33,94 @@ export class Renderer {
   }
 
   computeGeom() {
-    const dpr = window.devicePixelRatio || 1;
+    //
+    // Knobs (tune here)
+    //
+    const DPR_FLOOR = 1;
+  
+    // HUD height (device-px). Keep pixel-based so text/buttons feel stable.
+    const HUD_H_PX = 46;
+  
+    // Board scale within available area (1.0 = max fit)
+    const BOARD_SCALE = 0.97;
+  
+    // Eval bar sizing (device-px)
+    const EVAL_BAR_W_PX = 16;
+  
+    // Eval spacing as a fraction of board size (clamped)
+    const EVAL_OUTER_MARGIN_PCT = 0.012; // space from screen edge
+    const EVAL_PAD_PCT = 0.018;          // gap between eval bar and board
+    const EVAL_SPACING_MIN_PX = 4;       // min clamp (CSS px, pre-dpr)
+    const EVAL_SPACING_MAX_PX = 14;      // max clamp (CSS px, pre-dpr)
+  
+    // Safety inset so board never touches edges (fraction of board size)
+    const BOARD_SAFE_PAD_PCT = 0.010;
+    const BOARD_SAFE_PAD_MIN_PX = 2;
+    const BOARD_SAFE_PAD_MAX_PX = 10;
+  
+    //
+    // Helpers
+    //
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  
+    const dpr = Math.max(DPR_FLOOR, window.devicePixelRatio || 1);
     const w = this.canvas.width;
     const h = this.canvas.height;
-
-    const hudH = 46 * dpr;
-
-    // Left eval gutter (placeholder)
-    const evalOuterMargin = 8 * dpr;
-    const evalW = 16 * dpr;
-    const evalPad = 10 * dpr;
+  
+    // Convert "css px" clamps to device px
+    const px = (cssPx) => cssPx * dpr;
+  
+    const hudH = HUD_H_PX * dpr;
+  
+    // Available space below HUD
+    const baseAvailW = Math.max(1, w);
+    const baseAvailH = Math.max(1, h - hudH);
+  
+    // First-pass board size ignoring eval gutter; lets us compute % spacing from board size.
+    const prelimSize = Math.max(1, Math.min(baseAvailW, baseAvailH) * BOARD_SCALE);
+  
+    // Spacing derived from board size (then clamped)
+    const evalOuterMargin = clamp(
+      prelimSize * EVAL_OUTER_MARGIN_PCT,
+      px(EVAL_SPACING_MIN_PX),
+      px(EVAL_SPACING_MAX_PX)
+    );
+  
+    const evalPad = clamp(
+      prelimSize * EVAL_PAD_PCT,
+      px(EVAL_SPACING_MIN_PX),
+      px(EVAL_SPACING_MAX_PX)
+    );
+  
+    const evalW = EVAL_BAR_W_PX * dpr;
+  
+    // Optional safe padding so board never kisses edges (esp. when BOARD_SCALE is high)
+    const boardSafePad = clamp(
+      prelimSize * BOARD_SAFE_PAD_PCT,
+      px(BOARD_SAFE_PAD_MIN_PX),
+      px(BOARD_SAFE_PAD_MAX_PX)
+    );
+  
+    // Left inset consumed by eval gutter
     const leftInset = evalOuterMargin + evalW + evalPad;
-
-    const availW = Math.max(1, w - leftInset);
-    const availH = Math.max(1, h - hudH);
-
-    const size = Math.min(availW, availH) * 0.94;
+  
+    // Final available area for board
+    const availW = Math.max(1, w - leftInset - boardSafePad * 2);
+    const availH = Math.max(1, h - hudH - boardSafePad * 2);
+  
+    // Final board sizing
+    const size = Math.max(1, Math.min(availW, availH) * BOARD_SCALE);
     const sq = size / 8;
-
-    const boardX0 = leftInset + (availW - size) / 2;
-    const boardY0 = hudH + (availH - size) / 2;
-
+  
+    // Center board in remaining area (respect safe padding)
+    const boardX0 = leftInset + boardSafePad + (availW - size) / 2;
+    const boardY0 = hudH + boardSafePad + (availH - size) / 2;
+  
+    // Eval bar aligned to board vertically
     const evalX = evalOuterMargin;
     const evalY = boardY0;
     const evalH = size;
-
+  
     return {
       dpr, w, h,
       hudH,
