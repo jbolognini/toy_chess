@@ -1,11 +1,13 @@
 :root {
-  --topbar-h: 76px;     /* title row (32) + controls row (44) */
-  --bottombar-h: 44px;  /* game controls */
-  --drawer-h: 20vh;     /* how tall the move drawer is when open */
-  --canvas-bottom: var(--bottombar-h); /* updated by JS when drawer opens */
-}
+  /* title row (32) + controls row (44) */
+  --topbar-h: 76px;
+  /* game controls */
+  --bottombar-h: 44px;
+  /* how tall the move drawer is when open */
+  --drawer-h: 20vh;
+  /* updated by JS when drawer opens */
+  --canvas-bottom: var(--bottombar-h);
 
-:root {
   /* App surfaces */
   --app-bg: #222;
   --bar-bg: #2a2a2a;
@@ -32,7 +34,7 @@
   --eval-white: rgba(255,255,255,0.70);
   --eval-black: rgba(0,0,0,0.70);
 
-	/* Captured material */
+  /* Captured material */
   --captured-halo-white: rgba(255, 255, 255, 0.95);
   --captured-halo-black: rgba(200, 200, 200, 0.95);
 }
