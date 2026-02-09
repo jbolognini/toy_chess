@@ -175,13 +175,33 @@ export class Renderer {
     if (!mover) return out;
 
     const moverColor = mover[0]; // "w" or "b"
+    const moverType = mover[1];  // "p","n","b","r","q","k"
+
+    // En passant target square from FEN (if any)
+    const ep = this._getEnPassantTargetXY();
+
     for (const t of this.game.legalTargets) {
       const victim = this.game.pieceCodeAt(t.x, t.y);
-      if (victim && victim[0] !== moverColor) out.push(t);
+
+      // Normal capture: victim sits on target
+      if (victim && victim[0] !== moverColor) {
+        out.push(t);
+        continue;
+      }
+
+      // En passant: pawn captures onto empty ep square
+      if (!victim && ep && moverType === "p" && t.x === ep.x && t.y === ep.y) {
+        // Captured pawn is on target file, same rank as mover started on.
+        const cap = this.game.pieceCodeAt(t.x, sel.y);
+        if (cap && cap[1] === "p" && cap[0] !== moverColor) {
+          out.push(t);
+        }
+      }
     }
+
     return out;
   }
-
+  
   computeGeom() {
     // ============================================================
     // Knobs (tune here)
@@ -778,5 +798,26 @@ export class Renderer {
       }
     }
     return null;
+  }
+  
+    _getEnPassantTargetXY() {
+    const fen = (typeof this.game.chessView?.fen === "function") ? this.game.chessView.fen() : "";
+    if (!fen) return null;
+
+    const parts = fen.split(" ");
+    if (parts.length < 4) return null;
+
+    const ep = parts[3]; // "-" or like "e3"
+    if (!ep || ep === "-" || ep.length !== 2) return null;
+
+    const file = ep.charCodeAt(0) - "a".charCodeAt(0); // a..h -> 0..7
+    const rank = ep.charCodeAt(1) - "0".charCodeAt(0); // '1'..'8' -> 1..8
+    if (file < 0 || file > 7 || rank < 1 || rank > 8) return null;
+
+    // Your board coords: y=0 is top (rank 8), y=7 is bottom (rank 1)
+    const x = file;
+    const y = 8 - rank;
+
+    return { x, y };
   }
 }
