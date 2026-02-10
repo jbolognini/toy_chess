@@ -12,11 +12,11 @@
 
     <script>
       // Set by CI during deploy (short SHA). Safe fallback for local runs.
-      window.APP_VER = "991e380c";
+      window.APP_VER = "24a808bf";
     </script>
 
     <script type="module">
-      const v = String(window.APP_VER || "dev");
+      const v = String(window.APP_VER || "dev"); 
 
       function ensureFatalPre() {
         let pre = document.getElementById("fatalError");

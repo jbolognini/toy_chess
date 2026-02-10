@@ -1,3 +1,5 @@
+// game.js
+
 import { Chess } from "./lib/chess.mjs";
 
 const FILES = "abcdefgh";

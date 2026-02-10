@@ -1,3 +1,5 @@
+// main.js
+
 import { Game } from "./game.js";
 import { Renderer } from "./render.js";
 import { Input } from "./input.js";
