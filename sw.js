@@ -1,3 +1,5 @@
+// sw.js
+
 const CACHE = "toy_chess___CACHE_ID__"; // set by CI during deploy (short SHA)
 
 const FILES = [
