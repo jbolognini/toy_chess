@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="stylesheet" href="./style.css" />
+    <title>Toy Chess</title>
+
+    <script>
+      // Set by CI during deploy (short SHA). Safe fallback for local runs.
+      window.APP_VER = "8aa01811";
+    </script>
+
+    <script type="module">
+      const v = String(window.APP_VER || "dev");
+
+      function ensureFatalPre() {
+        let pre = document.getElementById("fatalError");
+        if (!pre) {
+          pre = document.createElement("pre");
+          pre.id = "fatalError";
+          document.body.appendChild(pre);
+        }
+        return pre;
+      }
+
+      function setTitleError(tag) {
+        document.title = `Toy Chess v${v} (${tag})`;
+        const titleEl = document.getElementById("titleText");
+        if (titleEl) titleEl.textContent = `Toy Chess v${v} (${tag})`;
+      }
+
+      function showFatal(tag, msg) {
+        const run = () => {
+          setTitleError(tag);
+          const pre = ensureFatalPre();
+          pre.textContent = msg;
+        };
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", run, { once: true });
+        } else {
+          run();
+        }
+      }
+
+      // Catch runtime script errors (including order-of-init bugs)
+      window.addEventListener("error", (ev) => {
+        const msg =
+          ev?.error?.stack ||
+          ev?.error?.message ||
+          `${ev?.message || "Script error"}\n@ ${ev?.filename || "?"}:${
+            ev?.lineno || "?"
+          }:${ev?.colno || "?"}`;
+        showFatal("RUNTIME ERROR", msg);
+      });
+
+      // Catch unhandled promise rejections
+      window.addEventListener("unhandledrejection", (ev) => {
+        const r = ev?.reason;
+        const msg = r?.stack || r?.message || String(r || "Unhandled rejection");
+        showFatal("UNHANDLED REJECTION", msg);
+      });
+
+      // Load the app
+      try {
+        await import(`./main.js?v=${v}`);
+      } catch (e) {
+        const msg = String(e?.stack || e?.message || e);
+        showFatal("LOAD ERROR", msg);
+      }
+    </script>
+  </head>
+
+  <body>
+    <div id="topbar">
+      <div id="titleRow">
+        <div id="titleText">Toy Chess</div>
+      </div>
+
+      <div id="controlsRow">
+        <button id="undoBtn" type="button">↶ Undo</button>
+        <button id="redoBtn" type="button">↷ Redo</button>
+        <button id="resetBtn" type="button">⟲ Reset</button>
+      </div>
+    </div>
+
+    <div id="drawer" class="drawer-closed">
+      <div id="movesTable"></div>
+    </div>
+
+    <canvas id="board"></canvas>
+
+    <div id="bottombar">
+      <div id="bottomPlay">
+        <button id="movesBtn" type="button">Moves</button>
+        <button id="reviewBtn" type="button">Review</button>
+      </div>
+
+      <div id="bottomReview" class="hidden">
+        <button id="revStartBtn" type="button">⏮</button>
+        <button id="revBackBtn" type="button">⏪</button>
+        <button id="revFwdBtn" type="button">⏩</button>
+        <button id="revEndBtn" type="button">⏭</button>
+        <button id="revCancelBtn" type="button">Cancel</button>
+        <button id="revPlayHereBtn" type="button">Play from here</button>
+      </div>
+    </div>
+  </body>
+</html>
