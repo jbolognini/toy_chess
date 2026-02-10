@@ -1,4 +1,4 @@
-const CACHE = "toy_chess_1c0ae7c6"; // set by CI during deploy (short SHA)
+const CACHE = "toy_chess_43ff1f8f"; // set by CI during deploy (short SHA)
 
 const FILES = [
   "./",
