@@ -1,0 +1,30 @@
+name: PR Preview
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: read
+  pages: write
+  pull-requests: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject build/cache IDs
+        if: github.event.action != 'closed'
+        shell: bash
+        run: |
+          BUILD_ID="${GITHUB_SHA::8}"
+          [ -f index.html ] && sed -i "s/__BUILD_ID__/${BUILD_ID}/g" index.html
+          [ -f sw.js ] && sed -i "s/__CACHE_ID__/${BUILD_ID}/g" sw.js
+
+      - name: Deploy PR preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: .
