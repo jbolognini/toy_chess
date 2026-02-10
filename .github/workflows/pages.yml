@@ -1,4 +1,4 @@
-name: Deploy Pages (main)
+name: Deploy Pages (main → gh-pages)
 
 on:
   push:
@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -25,16 +23,12 @@ jobs:
         shell: bash
         run: |
           BUILD_ID="${GITHUB_SHA::8}"
-
-          # Replace placeholders (only if files exist)
           [ -f index.html ] && sed -i "s/__BUILD_ID__/${BUILD_ID}/g" index.html
           [ -f sw.js ] && sed -i "s/__CACHE_ID__/${BUILD_ID}/g" sw.js
-          [ -f main.js ] && sed -i "s/__BUILD_ID__/${BUILD_ID}/g" main.js || true
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages (preserve PR previews)
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: .
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+          branch: gh-pages
+          folder: .
+          clean-exclude: pr-preview/
