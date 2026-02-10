@@ -1,4 +1,4 @@
-// render.js
+// render.js 
 
 // Loud fallback so theme bugs are obvious.
 // If you ever see these colors, CSS theme tokens are missing or not loaded.
