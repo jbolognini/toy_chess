@@ -1,4 +1,4 @@
-const CACHE = "toy_chess_v10"; // bump when you want to force-update
+const CACHE = "toy_chess___CACHE_ID__"; // set by CI during deploy (short SHA)
 
 const FILES = [
   "./",

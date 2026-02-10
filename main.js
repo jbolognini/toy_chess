@@ -4,7 +4,7 @@ import { Input } from "./input.js";
 import { Engine } from "./engine.js";
 import { loadTheme } from "./theme.js";
 
-const APP_VER = window.APP_VER || 0;
+const APP_VER = String(window.APP_VER || "dev");
 const APP_TITLE = `Toy Chess v${APP_VER}`;
 
 document.title = APP_TITLE;

@@ -11,12 +11,12 @@
     <title>Toy Chess</title>
 
     <script>
-      // Bump this when Safari is stubborn
-      window.APP_VER = 56;
+      // Set by CI during deploy (short SHA). Safe fallback for local runs.
+      window.APP_VER = "__BUILD_ID__";
     </script>
 
     <script type="module">
-      const v = window.APP_VER || 0;
+      const v = String(window.APP_VER || "dev");
 
       function ensureFatalPre() {
         let pre = document.getElementById("fatalError");
