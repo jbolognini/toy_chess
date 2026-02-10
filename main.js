@@ -4,6 +4,7 @@ import { Game } from "./game.js";
 import { Renderer } from "./render.js";
 import { Input } from "./input.js";
 import { Engine } from "./engine.js";
+import { OpeningEval } from "./opening_eval.js";
 import { loadTheme } from "./theme.js";
 
 const APP_VER = String(window.APP_VER || "dev");
@@ -33,6 +34,10 @@ new Input(canvas, game);
 // Engine disabled in review mode (but we still keep the worker plumbing)
 const engine = new Engine(game, (_evalData) => {});
 renderer.engine = engine;
+
+const openingEval = new OpeningEval(game, (suggestion) => {
+  game.enqueueOpeningUpdate(suggestion);
+});
 
 function setDrawerOpen(open) {
   drawer.classList.toggle("drawer-open", !!open);
@@ -298,7 +303,10 @@ function loop() {
   if (game.mode === "play") {
     engine.analyzeIfNeeded();
   }
-  
+
+  openingEval.requestIfNeeded();
+  game.processAsyncUpdates();
+
   maybeUpdateMovesTable();
   renderer.draw();
   requestAnimationFrame(loop);

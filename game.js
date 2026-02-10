@@ -43,6 +43,11 @@ export class Game {
     // Versions
     this._uiVersion = 0;
     this._posVersion = 0;
+
+    // Async opening suggestion mailbox/state.
+    this._openingMailbox = [];
+    this._openingByFen = new Map();
+    this.openingSuggestion = null;
   }
 
   // ----- versions -----
@@ -103,12 +108,21 @@ export class Game {
     this._rebuildCapturedFromHistory(ply);
 
     // Any other derived UI state can be refreshed here later
+    const forFen = this._openingByFen.get(this.viewFen()) || null;
+    if (forFen !== this.openingSuggestion) {
+      this.openingSuggestion = forFen;
+      this._uiVersion++;
+    }
   }
   
   // ----- status / pieces read from VIEW -----
   turn() { return this.chessView.turn(); }
 
   fen() { return this.chessLive.fen(); }
+
+  viewFen() {
+    return this.chessView.fen();
+  }
 
   pieceCodeAt(x, y) {
     const sq = this.squareFromXY(x, y);
@@ -161,7 +175,57 @@ export class Game {
   }
 
   debugLine() {
-    return `mode:${this.mode} ui:${this._uiVersion} pos:${this._posVersion} ply:${this.history.length} rev:${this.reviewPly}`;
+    const opening = this.openingDebugLine();
+    return `mode:${this.mode} ui:${this._uiVersion} pos:${this._posVersion} ply:${this.history.length} rev:${this.reviewPly} ${opening}`;
+  }
+
+  openingDebugLine() {
+    const o = this.openingSuggestion;
+    if (!o) return "openings:pending";
+
+    if (o.status === "rate_limited") {
+      const sec = Math.max(0, Math.ceil((o.retryAtMs - Date.now()) / 1000));
+      return `openings:rate-limit (${sec}s)`;
+    }
+    if (o.status !== "ok") {
+      return `openings:${o.status}`;
+    }
+
+    if (!o.suggestions || o.suggestions.length === 0) {
+      return "openings:none";
+    }
+
+    const top = o.suggestions
+      .slice(0, 3)
+      .map((m) => m.san || m.uci || "?")
+      .join(",");
+    return `openings:${top}${o.cached ? " (cached)" : ""}`;
+  }
+
+  enqueueOpeningUpdate(update) {
+    if (!update || !update.fen) return;
+    this._openingMailbox.push(update);
+  }
+
+  processAsyncUpdates() {
+    if (this._openingMailbox.length === 0) return false;
+
+    let touched = false;
+    while (this._openingMailbox.length > 0) {
+      const update = this._openingMailbox.shift();
+      this._openingByFen.set(update.fen, update);
+      touched = true;
+    }
+
+    const visible = this.viewFen();
+    const next = this._openingByFen.get(visible) || null;
+    if (next !== this.openingSuggestion) {
+      this.openingSuggestion = next;
+      touched = true;
+    }
+
+    if (touched) this._uiVersion++;
+    return touched;
   }
 
   // ----- selection / moves (PLAY ONLY) -----
@@ -524,6 +588,10 @@ export class Game {
 
     this.snapshots = [{ ply: 0, san: null, fen: this.chessLive.fen() }];
     this.reviewPly = 0;
+
+    this._openingMailbox = [];
+    this._openingByFen.clear();
+    this.openingSuggestion = null;
 
     this._posVersion++;
     this._uiVersion++;
