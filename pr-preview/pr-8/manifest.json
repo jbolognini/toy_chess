@@ -1,0 +1,9 @@
+{
+  "name": "Toy Chess",
+  "short_name": "ToyChess",
+  "display": "standalone",
+  "background_color": "#111",
+  "theme_color": "#111",
+  "icons": []
+}
+
