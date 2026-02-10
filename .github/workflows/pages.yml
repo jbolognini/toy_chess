@@ -1,0 +1,40 @@
+name: Deploy Pages (main)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject build/cache IDs
+        shell: bash
+        run: |
+          BUILD_ID="${GITHUB_SHA::8}"
+
+          # Replace placeholders (only if files exist)
+          [ -f index.html ] && sed -i "s/__BUILD_ID__/${BUILD_ID}/g" index.html
+          [ -f sw.js ] && sed -i "s/__CACHE_ID__/${BUILD_ID}/g" sw.js
+          [ -f main.js ] && sed -i "s/__BUILD_ID__/${BUILD_ID}/g" main.js || true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
