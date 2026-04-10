@@ -1,3 +1,5 @@
+// input.js
+
 export class Input {
   constructor(canvas, game) {
     this.game = game;

@@ -1,4 +1,5 @@
 // board.js
+
 export class Board {
   constructor() {
     this.size = 8;

@@ -1,11 +1,15 @@
+// main.js
+
 import { Game } from "./game.js";
 import { Renderer } from "./render.js";
 import { Input } from "./input.js";
 import { Engine } from "./engine.js";
+import { OpeningEval } from "./opening_eval.js";
 import { loadTheme } from "./theme.js";
 
 const APP_VER = String(window.APP_VER || "dev");
 const APP_TITLE = `Toy Chess v${APP_VER}`;
+const OPENINGS_ENABLED = false;
 
 document.title = APP_TITLE;
 const titleEl = document.getElementById("titleText");
@@ -24,6 +28,7 @@ const drawer = document.getElementById("drawer");
 const movesTable = document.getElementById("movesTable");
 
 const game = new Game();
+game.openingsEnabled = OPENINGS_ENABLED;
 const renderer = new Renderer(canvas, game, () => game.debugLine(), theme);
 
 new Input(canvas, game);
@@ -31,6 +36,12 @@ new Input(canvas, game);
 // Engine disabled in review mode (but we still keep the worker plumbing)
 const engine = new Engine(game, (_evalData) => {});
 renderer.engine = engine;
+
+const openingEval = OPENINGS_ENABLED
+  ? new OpeningEval(game, (suggestion) => {
+      game.enqueueOpeningUpdate(suggestion);
+    })
+  : null;
 
 function setDrawerOpen(open) {
   drawer.classList.toggle("drawer-open", !!open);
@@ -296,7 +307,10 @@ function loop() {
   if (game.mode === "play") {
     engine.analyzeIfNeeded();
   }
-  
+
+  if (openingEval) openingEval.requestIfNeeded();
+  if (openingEval) game.processAsyncUpdates();
+
   maybeUpdateMovesTable();
   renderer.draw();
   requestAnimationFrame(loop);
