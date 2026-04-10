@@ -103,25 +103,74 @@ export class Input {
 
   // Must match render.js geometry
   computeGeom() {
-    const dpr = window.devicePixelRatio || 1;
+    // HUD height (CSS px)
+    const HUD_H_PX = 46;
+
+    // Board scale inside the usable area (1.0 = maximum fit)
+    const BOARD_SCALE = 0.985;
+
+    // Eval bar thickness (CSS px)
+    const EVAL_BAR_W_PX = 14;
+
+    // Edge padding: screen edge -> eval bar (CSS px), clamped
+    const EDGE_PAD_MIN_PX = 0;
+    const EDGE_PAD_MAX_PX = 6;
+
+    // Default edge pad target as a fraction of board size (tight by default)
+    const EDGE_PAD_PCT = 0.006;
+
+    // Deterministic rule: eval-to-board gap is half of edge padding
+    const GAP_IS_HALF_EDGE = true;
+
+    // Optional: tiny safety pad (CSS px)
+    const BOARD_SAFE_PAD_PX = 0;
+
+    // ============================================================
+    // Helpers
+    // ============================================================
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    const DPR_FLOOR = 1;
+    const dpr = Math.max(DPR_FLOOR, window.devicePixelRatio || 1);
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    const hudH = 46 * dpr;
+    const px = (cssPx) => cssPx * dpr;
 
-    const evalOuterMargin = 8 * dpr;
-    const evalW = 16 * dpr;
-    const evalPad = 10 * dpr;
-    const leftInset = evalOuterMargin + evalW + evalPad;
+    const hudH = px(HUD_H_PX);
+    const safePad = px(BOARD_SAFE_PAD_PX);
 
-    const availW = Math.max(1, w - leftInset);
-    const availH = Math.max(1, h - hudH);
+    // Available height below HUD
+    const availH0 = Math.max(1, h - hudH - safePad * 2);
+    const availW0 = Math.max(1, w - safePad * 2);
 
-    const size = Math.min(availW, availH) * 0.94;
+    // First estimate for board size to choose edge padding
+    const prelimSize = Math.max(1, Math.min(availW0, availH0) * BOARD_SCALE);
+
+    // Tight edge padding from percentage, clamp to [min..max] in device px
+    const edgePad = clamp(
+      prelimSize * EDGE_PAD_PCT,
+      px(EDGE_PAD_MIN_PX),
+      px(EDGE_PAD_MAX_PX)
+    );
+
+    // Gap: half-edge or full edge
+    const evalPad = GAP_IS_HALF_EDGE ? (edgePad * 0.5) : edgePad;
+
+    const evalW = px(EVAL_BAR_W_PX);
+    const leftInset = edgePad + evalW + evalPad;
+
+    // Final available width for board after reserving eval gutter
+    const availW = Math.max(1, w - leftInset - safePad * 2);
+    const availH = availH0;
+
+    // Board size
+    const size = Math.max(1, Math.min(availW, availH) * BOARD_SCALE);
     const sq = size / 8;
 
-    const ox = leftInset + (availW - size) / 2;
-    const oy = hudH + (availH - size) / 2;
+    // Center board
+    const ox = leftInset + safePad + (availW - size) / 2;
+    const oy = hudH + safePad + (availH - size) / 2;
 
     return { dpr, w, h, hudH, size, sq, ox, oy };
   }
