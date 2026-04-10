@@ -48,6 +48,7 @@ export class Game {
     this._openingMailbox = [];
     this._openingByFen = new Map();
     this.openingSuggestion = null;
+    this.openingsEnabled = true;
   }
 
   // ----- versions -----
@@ -180,6 +181,8 @@ export class Game {
   }
 
   openingDebugLine() {
+    if (!this.openingsEnabled) return "openings:off";
+
     const o = this.openingSuggestion;
     if (!o) return "openings:pending";
 

@@ -9,6 +9,7 @@ import { loadTheme } from "./theme.js";
 
 const APP_VER = String(window.APP_VER || "dev");
 const APP_TITLE = `Toy Chess v${APP_VER}`;
+const OPENINGS_ENABLED = false;
 
 document.title = APP_TITLE;
 const titleEl = document.getElementById("titleText");
@@ -27,6 +28,7 @@ const drawer = document.getElementById("drawer");
 const movesTable = document.getElementById("movesTable");
 
 const game = new Game();
+game.openingsEnabled = OPENINGS_ENABLED;
 const renderer = new Renderer(canvas, game, () => game.debugLine(), theme);
 
 new Input(canvas, game);
@@ -35,9 +37,11 @@ new Input(canvas, game);
 const engine = new Engine(game, (_evalData) => {});
 renderer.engine = engine;
 
-const openingEval = new OpeningEval(game, (suggestion) => {
-  game.enqueueOpeningUpdate(suggestion);
-});
+const openingEval = OPENINGS_ENABLED
+  ? new OpeningEval(game, (suggestion) => {
+      game.enqueueOpeningUpdate(suggestion);
+    })
+  : null;
 
 function setDrawerOpen(open) {
   drawer.classList.toggle("drawer-open", !!open);
@@ -304,8 +308,8 @@ function loop() {
     engine.analyzeIfNeeded();
   }
 
-  openingEval.requestIfNeeded();
-  game.processAsyncUpdates();
+  if (openingEval) openingEval.requestIfNeeded();
+  if (openingEval) game.processAsyncUpdates();
 
   maybeUpdateMovesTable();
   renderer.draw();
