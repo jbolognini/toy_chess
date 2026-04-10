@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE = "toy_chess_24a808bf"; // set by CI during deploy (short SHA)
+const CACHE = "toy_chess_7802cd83"; // set by CI during deploy (short SHA)
 
 const FILES = [
   "./",
@@ -13,6 +13,8 @@ const FILES = [
   "./input.js",
   "./engine.js",
   "./engine.worker.js",
+  "./opening_eval.js",
+  "./opening.worker.js",
   "./game.js",
   "./lib/chess.mjs",
   "./manifest.json",
